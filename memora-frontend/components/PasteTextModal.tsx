@@ -7,6 +7,7 @@ interface SummaryModel {
   name: string;
   description: string;
   isDefault: boolean;
+  user_id: number | null;  // null = système, number = personnalisé
 }
 
 interface PasteTextModalProps {
@@ -26,6 +27,10 @@ export default function PasteTextModal({ isOpen, onClose, onSuccess }: PasteText
   const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Séparer les modèles système et personnalisés
+  const systemModels = models.filter(m => m.user_id === null);
+  const userModels = models.filter(m => m.user_id !== null);
 
   // Charger les modèles de résumé au montage
   useEffect(() => {
@@ -296,7 +301,7 @@ export default function PasteTextModal({ isOpen, onClose, onSuccess }: PasteText
               />
             </div>
 
-            {/* Sélecteur de modèle - Custom Dropdown */}
+            {/* Sélecteur de modèle - Custom Dropdown avec groupes */}
             <div className="mb-6 relative" ref={dropdownRef}>
               <label className="flex items-center gap-2 text-sm font-medium mb-2" style={{ color: '#A8B78A' }}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,7 +322,17 @@ export default function PasteTextModal({ isOpen, onClose, onSuccess }: PasteText
                   boxShadow: showModelDropdown ? '0 0 20px rgba(215, 224, 140, 0.2)' : 'none'
                 }}
               >
-                <span>{getSelectedModel()?.name || 'Sélectionner un modèle'}</span>
+                <div className="flex items-center gap-2">
+                  <span>{getSelectedModel()?.name || 'Sélectionner un modèle'}</span>
+                  {getSelectedModel() && getSelectedModel()?.user_id === null && (
+                    <span 
+                      className="text-xs px-1.5 py-0.5 rounded"
+                      style={{ backgroundColor: 'rgba(168, 183, 138, 0.2)', color: '#A8B78A' }}
+                    >
+                      Système
+                    </span>
+                  )}
+                </div>
                 <svg 
                   className="w-5 h-5 transition-transform duration-200" 
                   style={{ color: '#A8B78A', transform: showModelDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }}
@@ -329,7 +344,7 @@ export default function PasteTextModal({ isOpen, onClose, onSuccess }: PasteText
                 </svg>
               </button>
 
-              {/* Liste déroulante */}
+              {/* Liste déroulante avec groupes */}
               {showModelDropdown && (
                 <div 
                   className="absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden z-50 animate-fade-in"
@@ -338,7 +353,7 @@ export default function PasteTextModal({ isOpen, onClose, onSuccess }: PasteText
                     backdropFilter: 'blur(20px)',
                     border: '1px solid rgba(168, 183, 138, 0.15)',
                     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
-                    maxHeight: '200px',
+                    maxHeight: '280px',
                     overflowY: 'auto'
                   }}
                 >
@@ -348,45 +363,148 @@ export default function PasteTextModal({ isOpen, onClose, onSuccess }: PasteText
                   />
                   
                   <div className="py-1">
-                    {models.map((model) => (
-                      <button
-                        key={model.id}
-                        onClick={() => {
-                          setSelectedModelId(model.id);
-                          setShowModelDropdown(false);
-                        }}
-                        className="w-full px-4 py-3 flex items-center justify-between transition-colors text-left"
-                        style={{ 
-                          color: selectedModelId === model.id ? '#D7E08C' : '#f5f5f5',
-                          backgroundColor: selectedModelId === model.id ? 'rgba(215, 224, 140, 0.1)' : 'transparent'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (selectedModelId !== model.id) {
-                            e.currentTarget.style.backgroundColor = 'rgba(168, 183, 138, 0.1)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (selectedModelId !== model.id) {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                          }
-                        }}
-                      >
-                        <span className="font-medium">{model.name}</span>
-                        {model.isDefault && (
-                          <span 
-                            className="text-xs px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: 'rgba(215, 224, 140, 0.2)', color: '#D7E08C' }}
-                          >
-                            défaut
-                          </span>
-                        )}
-                        {selectedModelId === model.id && (
-                          <svg className="w-5 h-5" style={{ color: '#D7E08C' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    {/* Groupe : Modèles système */}
+                    {systemModels.length > 0 && (
+                      <>
+                        <div 
+                          className="px-4 py-2 flex items-center gap-2"
+                          style={{ backgroundColor: 'rgba(168, 183, 138, 0.05)' }}
+                        >
+                          <svg className="w-4 h-4" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                           </svg>
-                        )}
-                      </button>
-                    ))}
+                          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#A8B78A' }}>
+                            Modèles système
+                          </span>
+                        </div>
+                        {systemModels.map((model) => (
+                          <button
+                            key={model.id}
+                            onClick={() => {
+                              setSelectedModelId(model.id);
+                              setShowModelDropdown(false);
+                            }}
+                            className="w-full px-4 py-3 flex items-center justify-between transition-colors text-left"
+                            style={{ 
+                              color: selectedModelId === model.id ? '#D7E08C' : '#f5f5f5',
+                              backgroundColor: selectedModelId === model.id ? 'rgba(215, 224, 140, 0.1)' : 'transparent'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (selectedModelId !== model.id) {
+                                e.currentTarget.style.backgroundColor = 'rgba(168, 183, 138, 0.1)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (selectedModelId !== model.id) {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }
+                            }}
+                          >
+                            <span className="font-medium">{model.name}</span>
+                            <div className="flex items-center gap-2">
+                              {model.isDefault && (
+                                <span 
+                                  className="text-xs px-2 py-0.5 rounded-full"
+                                  style={{ backgroundColor: 'rgba(215, 224, 140, 0.2)', color: '#D7E08C' }}
+                                >
+                                  défaut
+                                </span>
+                              )}
+                              {selectedModelId === model.id && (
+                                <svg className="w-5 h-5" style={{ color: '#D7E08C' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Séparateur si les deux groupes existent */}
+                    {systemModels.length > 0 && userModels.length > 0 && (
+                      <div className="mx-3 my-2 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.15)' }} />
+                    )}
+
+                    {/* Groupe : Mes modèles */}
+                    {userModels.length > 0 && (
+                      <>
+                        <div 
+                          className="px-4 py-2 flex items-center gap-2"
+                          style={{ backgroundColor: 'rgba(215, 224, 140, 0.05)' }}
+                        >
+                          <svg className="w-4 h-4" style={{ color: '#D7E08C' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#D7E08C' }}>
+                            Mes modèles
+                          </span>
+                        </div>
+                        {userModels.map((model) => (
+                          <button
+                            key={model.id}
+                            onClick={() => {
+                              setSelectedModelId(model.id);
+                              setShowModelDropdown(false);
+                            }}
+                            className="w-full px-4 py-3 flex items-center justify-between transition-colors text-left"
+                            style={{ 
+                              color: selectedModelId === model.id ? '#D7E08C' : '#f5f5f5',
+                              backgroundColor: selectedModelId === model.id ? 'rgba(215, 224, 140, 0.1)' : 'transparent'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (selectedModelId !== model.id) {
+                                e.currentTarget.style.backgroundColor = 'rgba(215, 224, 140, 0.08)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (selectedModelId !== model.id) {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }
+                            }}
+                          >
+                            <span className="font-medium">{model.name}</span>
+                            <div className="flex items-center gap-2">
+                              {model.isDefault && (
+                                <span 
+                                  className="text-xs px-2 py-0.5 rounded-full"
+                                  style={{ backgroundColor: 'rgba(215, 224, 140, 0.2)', color: '#D7E08C' }}
+                                >
+                                  défaut
+                                </span>
+                              )}
+                              {selectedModelId === model.id && (
+                                <svg className="w-5 h-5" style={{ color: '#D7E08C' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Message si aucun modèle personnalisé */}
+                    {userModels.length === 0 && systemModels.length > 0 && (
+                      <>
+                        <div className="mx-3 my-2 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.15)' }} />
+                        <div 
+                          className="px-4 py-2 flex items-center gap-2"
+                          style={{ backgroundColor: 'rgba(215, 224, 140, 0.05)' }}
+                        >
+                          <svg className="w-4 h-4" style={{ color: '#D7E08C' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#D7E08C' }}>
+                            Mes modèles
+                          </span>
+                        </div>
+                        <div className="px-4 py-3 text-sm" style={{ color: '#A8B78A' }}>
+                          <p className="italic">Aucun modèle personnalisé</p>
+                          <p className="text-xs mt-1">Créez-en dans Paramètres</p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
