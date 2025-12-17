@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import QuickImportModal from '@/components/QuickImportModal';
 import PasteTextModal from '@/components/PasteTextModal';
-import { getMeetings, createMeeting, deleteMeeting, isLoggedIn, logout, getProfile } from '@/lib/api';
+import { getMeetings, createMeeting, deleteMeeting, updateMeeting, isLoggedIn, logout, getProfile } from '@/lib/api';
 
 interface Meeting {
   id: number;
@@ -37,7 +37,12 @@ export default function DashboardPage() {
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; id: number | null; title: string }>({ show: false, id: null, title: '' });
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   
-  // Nouveaux states
+  // States pour l'édition inline du titre
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
+  
+  // Autres states
   const [searchExpanded, setSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -55,13 +60,20 @@ export default function DashboardPage() {
     loadData();
   }, [router]);
 
+  // Focus sur l'input d'édition quand on commence à éditer
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
+
   // Fermer le menu profil si clic ailleurs
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
       }
-      // Fermer la recherche si clic ailleurs et pas de texte
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
         if (!searchQuery) {
           setSearchExpanded(false);
@@ -115,6 +127,49 @@ export default function DashboardPage() {
       setCreating(false);
     }
   };
+
+  // ========== ÉDITION INLINE DU TITRE ==========
+  
+  const startEditing = (meeting: Meeting, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(meeting.id);
+    setEditingTitle(meeting.title);
+  };
+
+  const saveTitle = async () => {
+    if (!editingId || !editingTitle.trim()) {
+      cancelEditing();
+      return;
+    }
+
+    try {
+      await updateMeeting(editingId, { title: editingTitle.trim() });
+      setMeetings(prev => prev.map(m => 
+        m.id === editingId ? { ...m, title: editingTitle.trim() } : m
+      ));
+    } catch (error) {
+      console.error('Erreur modification titre:', error);
+    } finally {
+      setEditingId(null);
+      setEditingTitle('');
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditingTitle('');
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveTitle();
+    } else if (e.key === 'Escape') {
+      cancelEditing();
+    }
+  };
+
+  // ========== FIN ÉDITION INLINE ==========
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,7 +323,9 @@ export default function DashboardPage() {
               e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.1)';
               e.currentTarget.style.boxShadow = 'none';
             }}
-            onClick={() => router.push(`/meetings/${meeting.id}`)}
+            onClick={() => {
+              if (!editingId) router.push(`/meetings/${meeting.id}`);
+            }}
           >
             <div 
               className="absolute top-0 left-[10%] right-[10%] h-[1px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -284,9 +341,43 @@ export default function DashboardPage() {
               </div>
               
               <div className="flex-grow min-w-0">
-                <h3 className="text-lg font-semibold truncate" style={{ color: '#f5f5f5' }}>
-                  {meeting.title}
-                </h3>
+                {editingId === meeting.id ? (
+                  <input
+                    ref={editInputRef}
+                    type="text"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onBlur={saveTitle}
+                    onKeyDown={handleEditKeyDown}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-lg font-semibold bg-transparent outline-none border-b-2"
+                    style={{ 
+                      color: '#f5f5f5',
+                      borderColor: '#B58AFF',
+                      minWidth: '200px',
+                      maxWidth: '100%'
+                    }}
+                  />
+                ) : (
+                  <div 
+                    className="group/title inline-flex items-center gap-2 cursor-pointer"
+                    onClick={(e) => startEditing(meeting, e)}
+                    title="Cliquer pour modifier le titre"
+                  >
+                    <h3 className="text-lg font-semibold truncate" style={{ color: '#f5f5f5' }}>
+                      {meeting.title}
+                    </h3>
+                    <svg 
+                      className="w-4 h-4 opacity-0 group-hover/title:opacity-100 transition-opacity flex-shrink-0" 
+                      style={{ color: '#B58AFF' }} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center gap-3 mt-1 text-sm">
                   <span style={{ color: platform.color }}>{platform.name}</span>
                   <span style={{ color: 'rgba(168, 183, 138, 0.5)' }}>•</span>
@@ -381,7 +472,9 @@ export default function DashboardPage() {
               e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.1)';
               e.currentTarget.style.boxShadow = 'none';
             }}
-            onClick={() => router.push(`/meetings/${meeting.id}`)}
+            onClick={() => {
+              if (!editingId) router.push(`/meetings/${meeting.id}`);
+            }}
           >
             <div 
               className="absolute top-0 left-[10%] right-[10%] h-[2px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -398,9 +491,43 @@ export default function DashboardPage() {
               {getStatusBadge(meeting.status)}
             </div>
             
-            <h3 className="text-lg font-semibold mb-2 line-clamp-2 flex-grow" style={{ color: '#f5f5f5' }}>
-              {meeting.title}
-            </h3>
+            <div className="mb-2 flex-grow">
+              {editingId === meeting.id ? (
+                <input
+                  ref={editInputRef}
+                  type="text"
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onBlur={saveTitle}
+                  onKeyDown={handleEditKeyDown}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-lg font-semibold bg-transparent outline-none border-b-2 w-full"
+                  style={{ 
+                    color: '#f5f5f5',
+                    borderColor: '#B58AFF'
+                  }}
+                />
+              ) : (
+                <div 
+                  className="group/title inline-flex items-center gap-2 cursor-pointer"
+                  onClick={(e) => startEditing(meeting, e)}
+                  title="Cliquer pour modifier le titre"
+                >
+                  <h3 className="text-lg font-semibold line-clamp-2" style={{ color: '#f5f5f5' }}>
+                    {meeting.title}
+                  </h3>
+                  <svg 
+                    className="w-4 h-4 opacity-0 group-hover/title:opacity-100 transition-opacity flex-shrink-0" 
+                    style={{ color: '#B58AFF' }} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </div>
+              )}
+            </div>
             
             <div className="flex items-center gap-2 text-sm mb-4">
               <span style={{ color: platform.color }}>{platform.name}</span>
@@ -470,9 +597,8 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1E2A26' }}>
       
-      {/* Aurora background effects - identique à la page login */}
+      {/* Aurora background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Violet glow - top right */}
         <div 
           className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full"
           style={{
@@ -480,8 +606,6 @@ export default function DashboardPage() {
             filter: 'blur(80px)',
           }}
         />
-        
-        {/* Sage green glow - bottom left */}
         <div 
           className="absolute -bottom-40 -left-40 w-[600px] h-[600px] rounded-full"
           style={{
@@ -489,8 +613,6 @@ export default function DashboardPage() {
             filter: 'blur(80px)',
           }}
         />
-
-        {/* Violet glow - center left */}
         <div 
           className="absolute top-1/3 -left-20 w-[400px] h-[400px] rounded-full"
           style={{
@@ -498,8 +620,6 @@ export default function DashboardPage() {
             filter: 'blur(100px)',
           }}
         />
-
-        {/* Highlight yellow-green ambient */}
         <div 
           className="absolute top-1/2 right-1/4 w-[500px] h-[500px] rounded-full"
           style={{
@@ -507,8 +627,6 @@ export default function DashboardPage() {
             filter: 'blur(100px)',
           }}
         />
-
-        {/* Subtle grid pattern */}
         <svg className="absolute top-0 left-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
@@ -528,12 +646,10 @@ export default function DashboardPage() {
         }}
       >
         <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
-          {/* Logo h-24 */}
           <img src="/memora-logo.png" alt="Memora" className="h-24" />
           
-          {/* Actions header */}
           <div className="flex items-center gap-3">
-            {/* Recherche - slide au hover */}
+            {/* Recherche */}
             <div 
               ref={searchContainerRef}
               className="relative"
@@ -551,12 +667,9 @@ export default function DashboardPage() {
                   boxShadow: searchExpanded ? '0 0 20px rgba(181, 138, 255, 0.15)' : 'none',
                 }}
               >
-                {/* Input qui slide */}
                 <div
                   className="overflow-hidden transition-all duration-300 ease-out"
-                  style={{
-                    width: searchExpanded ? '180px' : '0px',
-                  }}
+                  style={{ width: searchExpanded ? '180px' : '0px' }}
                 >
                   <input
                     ref={searchInputRef}
@@ -574,8 +687,6 @@ export default function DashboardPage() {
                     }}
                   />
                 </div>
-                
-                {/* Bouton loupe */}
                 <button
                   type={searchExpanded && searchQuery ? 'submit' : 'button'}
                   className="w-10 h-10 flex items-center justify-center flex-shrink-0"
@@ -594,7 +705,7 @@ export default function DashboardPage() {
               </form>
             </div>
             
-            {/* Profil avec dropdown */}
+            {/* Profil */}
             <div className="relative" ref={profileMenuRef}>
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -629,7 +740,6 @@ export default function DashboardPage() {
                 </svg>
               </button>
               
-              {/* Dropdown menu */}
               {showProfileMenu && (
                 <div 
                   className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden animate-fade-in z-50"
@@ -640,12 +750,10 @@ export default function DashboardPage() {
                     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)'
                   }}
                 >
-                  {/* Top glow */}
                   <div 
                     className="absolute top-0 left-[10%] right-[10%] h-[1px]"
                     style={{ background: 'linear-gradient(90deg, transparent, #B58AFF, transparent)' }}
                   />
-                  
                   <div className="py-2">
                     <button
                       onClick={() => {
@@ -663,9 +771,7 @@ export default function DashboardPage() {
                       </svg>
                       <span className="font-medium">Paramètres</span>
                     </button>
-                    
                     <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
-                    
                     <button
                       onClick={() => {
                         setShowProfileMenu(false);
@@ -736,7 +842,6 @@ export default function DashboardPage() {
               </svg>
             </button>
             
-            {/* Menu déroulant */}
             {showNewMenu && (
               <div 
                 className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden animate-fade-in z-50"
@@ -751,9 +856,7 @@ export default function DashboardPage() {
                   className="absolute top-0 left-[10%] right-[10%] h-[1px]"
                   style={{ background: 'linear-gradient(90deg, transparent, #B58AFF, transparent)' }}
                 />
-                
                 <div className="py-2">
-                  {/* Option 1: Import rapide */}
                   <button
                     onClick={() => {
                       setShowNewMenu(false);
@@ -780,7 +883,6 @@ export default function DashboardPage() {
                   
                   <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
                   
-                  {/* Option 2: Coller du texte */}
                   <button
                     onClick={() => {
                       setShowNewMenu(false);
@@ -807,7 +909,6 @@ export default function DashboardPage() {
 
                   <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
                   
-                  {/* Option 3: Réunion vide */}
                   <button
                     onClick={() => {
                       setShowNewMenu(false);
@@ -837,7 +938,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Toggle Vue Liste / Cartes */}
+        {/* Toggle Vue */}
         {meetings.length > 0 && (
           <div className="flex justify-end mb-6">
             <div 
@@ -858,7 +959,6 @@ export default function DashboardPage() {
                 </svg>
                 <span className="hidden sm:inline">Liste</span>
               </button>
-              
               <button
                 onClick={() => handleViewModeChange('grid')}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300"
@@ -1010,7 +1110,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Modal de confirmation suppression */}
+        {/* Modal suppression */}
         {deleteModal.show && (
           <div 
             className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
@@ -1108,7 +1208,7 @@ export default function DashboardPage() {
           viewMode === 'list' ? renderListView() : renderGridView()
         )}
 
-        {/* Modal Import Rapide */}
+        {/* Modals */}
         <QuickImportModal
           isOpen={showQuickImport}
           onClose={() => setShowQuickImport(false)}
@@ -1118,7 +1218,6 @@ export default function DashboardPage() {
           }}
         />
 
-        {/* Modal coller texte */}
         <PasteTextModal
           isOpen={showPasteText}
           onClose={() => setShowPasteText(false)}

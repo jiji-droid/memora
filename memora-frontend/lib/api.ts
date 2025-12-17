@@ -134,6 +134,13 @@ export async function deleteMeeting(id: number) {
   });
 }
 
+export async function updateMeeting(id: number, data: { title?: string; platform?: string; status?: string }) {
+  return apiRequest(`/meetings/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
 // ============================================
 // TRANSCRIPTIONS
 // ============================================

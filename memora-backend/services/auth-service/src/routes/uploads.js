@@ -99,7 +99,7 @@ async function uploadRoutes(fastify, options) {
       if (!fileInfo) {
         return reply.status(400).send({
           success: false,
-          error: 'Type de fichier non supporté. Formats acceptés: MP3, WAV, M4A, MP4, WebM, VTT, SRT, TXT, DOCX'
+          error: 'Type de fichier non supporté. Formats acceptés: MP3, WAV, M4A, MP4, WebM, VTT, SRT, TXT, DOCX, PDF'
         });
       }
 
