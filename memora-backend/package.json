@@ -1,0 +1,24 @@
+{
+  "name": "memora-backend",
+  "version": "0.1.0",
+  "description": "Plateforme SaaS de gestion et résumé de transcriptions de réunions",
+  "private": true,
+  "scripts": {
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "dev:auth": "cd services/auth-service && npm run dev"
+  },
+  "keywords": [
+    "memora",
+    "transcription",
+    "meetings",
+    "ai",
+    "saas"
+  ],
+  "author": "Memora Team",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

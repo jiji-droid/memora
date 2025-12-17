@@ -1,0 +1,49 @@
+# ========================================
+# MEMORA - Fichiers à ignorer par Git
+# ========================================
+
+# === SECRETS (TRÈS IMPORTANT) ===
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# === Dépendances ===
+node_modules/
+.pnp/
+.pnp.js
+
+# === Build ===
+.next/
+out/
+build/
+dist/
+
+# === Fichiers uploadés par les utilisateurs ===
+uploads/
+*.mp3
+*.wav
+*.m4a
+*.mp4
+*.webm
+
+# === Logs ===
+logs/
+*.log
+npm-debug.log*
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# === Divers ===
+coverage/
+.nyc_output/
+*.tgz

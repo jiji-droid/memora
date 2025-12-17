@@ -1,0 +1,43 @@
+# ============================================
+# MEMORA - Fichiers à ignorer par Git
+# ============================================
+
+# Dépendances
+node_modules/
+.pnp/
+.pnp.js
+
+# Environnement (IMPORTANT : ne jamais commiter !)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Build
+dist/
+build/
+.next/
+
+# Cache
+.cache/
+.npm/
+.eslintcache
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Tests
+coverage/
+
+# Docker volumes locaux
+postgres_data/
+redis_data/
+rabbitmq_data/

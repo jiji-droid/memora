@@ -1,0 +1,77 @@
+# MEMORA - Docker Compose
+# Lance PostgreSQL, Redis et RabbitMQ en une seule commande
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # ============================================
+  # BASE DE DONNÉES POSTGRESQL
+  # Stocke les utilisateurs, réunions, transcriptions
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: memora-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-memora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-memora_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-memora_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U memora"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # CACHE REDIS
+  # Stocke les sessions, le cache temporaire
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: memora-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # FILE D'ATTENTE RABBITMQ
+  # Gère les tâches asynchrones (transcription, résumés)
+  # ============================================
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: memora-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-memora}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-memora_dev_password}
+    ports:
+      - "5672:5672"   # Port pour les applications
+      - "15672:15672" # Interface web de gestion
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+# ============================================
+# VOLUMES PERSISTANTS
+# Les données survivent au redémarrage des containers
+# ============================================
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
