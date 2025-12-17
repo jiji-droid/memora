@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import QuickImportModal from '@/components/QuickImportModal';
+import PasteTextModal from '@/components/PasteTextModal';
 import { getMeetings, createMeeting, deleteMeeting, isLoggedIn, logout, getProfile } from '@/lib/api';
 
 interface Meeting {
@@ -28,6 +29,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showNewMeeting, setShowNewMeeting] = useState(false);
   const [showQuickImport, setShowQuickImport] = useState(false);
+  const [showPasteText, setShowPasteText] = useState(false);
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newPlatform, setNewPlatform] = useState('teams');
@@ -778,7 +780,34 @@ export default function DashboardPage() {
                   
                   <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
                   
-                  {/* Option 2: Réunion vide */}
+                  {/* Option 2: Coller du texte */}
+                  <button
+                    onClick={() => {
+                      setShowNewMenu(false);
+                      setShowPasteText(true);
+                    }}
+                    className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
+                    style={{ color: '#f5f5f5' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(215, 224, 140, 0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: 'rgba(215, 224, 140, 0.2)' }}
+                    >
+                      <svg className="w-4 h-4" style={{ color: '#D7E08C' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <span className="font-medium block">Coller du texte</span>
+                      <span className="text-xs" style={{ color: '#A8B78A' }}>Copier-coller manuel</span>
+                    </div>
+                  </button>
+
+                  <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
+                  
+                  {/* Option 3: Réunion vide */}
                   <button
                     onClick={() => {
                       setShowNewMenu(false);
@@ -1085,6 +1114,16 @@ export default function DashboardPage() {
           onClose={() => setShowQuickImport(false)}
           onSuccess={(meetingId) => {
             setShowQuickImport(false);
+            router.push(`/meetings/${meetingId}`);
+          }}
+        />
+
+        {/* Modal coller texte */}
+        <PasteTextModal
+          isOpen={showPasteText}
+          onClose={() => setShowPasteText(false)}
+          onSuccess={(meetingId) => {
+            setShowPasteText(false);
             router.push(`/meetings/${meetingId}`);
           }}
         />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface SummaryModel {
   id: number;
@@ -9,31 +9,33 @@ interface SummaryModel {
   isDefault: boolean;
 }
 
-interface QuickImportModalProps {
+interface PasteTextModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (meetingId: number) => void;
 }
 
-const ACCEPTED_EXTENSIONS = '.mp3,.wav,.m4a,.ogg,.webm,.mp4,.mov,.avi,.vtt,.srt,.txt,.docx,.pdf';
-const MAX_FILE_SIZE_MB = 50;
-
-export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickImportModalProps) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+export default function PasteTextModal({ isOpen, onClose, onSuccess }: PasteTextModalProps) {
+  const [title, setTitle] = useState('');
+  const [text, setText] = useState('');
   const [models, setModels] = useState<SummaryModel[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ step: '', percent: 0 });
   const [error, setError] = useState<string | null>(null);
-  const [showModelDropdown, setShowModelDropdown] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Charger les modèles de résumé au montage
   useEffect(() => {
     if (isOpen) {
       loadModels();
+      // Focus sur le titre
+      setTimeout(() => {
+        const titleInput = document.getElementById('paste-title-input');
+        if (titleInput) titleInput.focus();
+      }, 100);
     }
   }, [isOpen]);
 
@@ -57,7 +59,6 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
       const data = await response.json();
       if (data.success) {
         setModels(data.data.models);
-        // Sélectionner le modèle par défaut
         const defaultModel = data.data.models.find((m: SummaryModel) => m.isDefault);
         if (defaultModel) {
           setSelectedModelId(defaultModel.id);
@@ -70,52 +71,16 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      if (droppedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        setError(`Le fichier dépasse la limite de ${MAX_FILE_SIZE_MB} MB`);
-        return;
-      }
-      setFile(droppedFile);
-      setError(null);
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        setError(`Le fichier dépasse la limite de ${MAX_FILE_SIZE_MB} MB`);
-        return;
-      }
-      setFile(selectedFile);
-      setError(null);
-    }
-  };
-
-  const getFileNameWithoutExtension = (filename: string) => {
-    return filename.replace(/\.[^/.]+$/, '');
-  };
-
   const getSelectedModel = () => {
     return models.find(m => m.id === selectedModelId);
   };
 
-  const handleImport = async () => {
-    if (!file || !selectedModelId) return;
+  const getWordCount = () => {
+    return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+  };
+
+  const handleSubmit = async () => {
+    if (!title.trim() || !text.trim() || !selectedModelId) return;
 
     setIsProcessing(true);
     setError(null);
@@ -124,8 +89,7 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
       const token = localStorage.getItem('memora_token');
       
       // Étape 1: Créer la réunion
-      setProgress({ step: 'Création de la réunion...', percent: 10 });
-      const meetingTitle = getFileNameWithoutExtension(file.name);
+      setProgress({ step: 'Création de la réunion...', percent: 20 });
       
       const meetingResponse = await fetch('http://localhost:3001/meetings', {
         method: 'POST',
@@ -134,7 +98,7 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          title: meetingTitle,
+          title: title.trim(),
           platform: 'import'
         })
       });
@@ -146,55 +110,28 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
       
       const meetingId = meetingData.data.meeting.id;
 
-      // Étape 2: Upload du fichier
-      setProgress({ step: 'Upload du fichier...', percent: 30 });
+      // Étape 2: Sauvegarder la transcription directement
+      setProgress({ step: 'Sauvegarde du texte...', percent: 50 });
       
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const uploadResponse = await fetch('http://localhost:3001/uploads', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-
-      const uploadData = await uploadResponse.json();
-      if (!uploadData.success) {
-        throw new Error(uploadData.error || 'Erreur upload fichier');
-      }
-
-      const fileId = uploadData.data.file.id;
-
-      // Étape 3: Lier le fichier à la réunion
-      setProgress({ step: 'Liaison du fichier...', percent: 40 });
-      
-      await fetch(`http://localhost:3001/uploads/${fileId}/link`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ meetingId })
-      });
-
-      // Étape 4: Transcription
-      setProgress({ step: 'Transcription en cours...', percent: 50 });
-      
-      const transcriptResponse = await fetch(`http://localhost:3001/transcriptions/file/${fileId}`, {
+      const transcriptResponse = await fetch('http://localhost:3001/transcripts', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ language: 'fr' })
+        body: JSON.stringify({
+          meetingId,
+          content: text.trim(),
+          language: 'fr'
+        })
       });
 
       const transcriptData = await transcriptResponse.json();
       if (!transcriptData.success) {
-        throw new Error(transcriptData.error || 'Erreur transcription');
+        throw new Error(transcriptData.error || 'Erreur sauvegarde transcription');
       }
 
-      // Étape 5: Génération du résumé
+      // Étape 3: Génération du résumé
       setProgress({ step: 'Génération du résumé IA...', percent: 75 });
       
       const summaryResponse = await fetch('http://localhost:3001/summaries/generate', {
@@ -229,14 +166,12 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
   };
 
   const resetModal = () => {
-    setFile(null);
+    setTitle('');
+    setText('');
     setIsProcessing(false);
     setProgress({ step: '', percent: 0 });
     setError(null);
     setShowModelDropdown(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   const handleClose = () => {
@@ -254,26 +189,36 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
       onClick={handleClose}
     >
       <div 
-        className="relative rounded-2xl p-6 w-full max-w-lg animate-scale-in"
+        className="relative rounded-2xl p-6 w-full max-w-2xl animate-scale-in max-h-[90vh] overflow-y-auto"
         style={{ 
           backgroundColor: 'rgba(46, 62, 56, 0.95)',
           backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(181, 138, 255, 0.2)',
-          boxShadow: '0 25px 80px rgba(0, 0, 0, 0.5), 0 0 60px rgba(181, 138, 255, 0.1)'
+          border: '1px solid rgba(215, 224, 140, 0.2)',
+          boxShadow: '0 25px 80px rgba(0, 0, 0, 0.5), 0 0 60px rgba(215, 224, 140, 0.1)'
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top glow */}
         <div 
           className="absolute top-0 left-[10%] right-[10%] h-[2px] rounded-full"
-          style={{ background: 'linear-gradient(90deg, transparent, #B58AFF, #A8B78A, transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, #D7E08C, #A8B78A, transparent)' }}
         />
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold" style={{ color: '#f5f5f5' }}>
-            Import rapide
-          </h3>
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: 'rgba(215, 224, 140, 0.2)' }}
+            >
+              <svg className="w-5 h-5" style={{ color: '#D7E08C' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold" style={{ color: '#f5f5f5' }}>
+              Coller du texte
+            </h3>
+          </div>
           {!isProcessing && (
             <button
               onClick={handleClose}
@@ -290,125 +235,66 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
         {/* Contenu principal */}
         {!isProcessing ? (
           <>
-            {/* Zone de drop */}
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`
-                relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer mb-4
-                transition-all duration-300
-                ${isDragging ? 'scale-[1.02]' : 'hover:scale-[1.01]'}
-              `}
-              style={{
-                borderColor: isDragging ? '#B58AFF' : file ? '#A8B78A' : 'rgba(168, 183, 138, 0.3)',
-                backgroundColor: isDragging ? 'rgba(181, 138, 255, 0.1)' : file ? 'rgba(168, 183, 138, 0.1)' : 'rgba(30, 42, 38, 0.5)'
-              }}
-            >
-              {file ? (
-                <div className="flex items-center justify-center gap-3">
-                  <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: 'rgba(168, 183, 138, 0.2)' }}
-                  >
-                    <svg className="w-6 h-6" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium truncate max-w-[250px]" style={{ color: '#f5f5f5' }}>{file.name}</p>
-                    <p className="text-sm" style={{ color: '#A8B78A' }}>
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFile(null);
-                    }}
-                    className="ml-2 p-2 rounded-lg transition-colors"
-                    style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
-                  >
-                    <svg className="w-4 h-4" style={{ color: '#ef4444' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div 
-                    className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4"
-                    style={{ 
-                      background: isDragging 
-                        ? 'linear-gradient(135deg, #B58AFF 0%, #A8B78A 100%)' 
-                        : 'rgba(46, 62, 56, 0.8)' 
-                    }}
-                  >
-                    <svg 
-                      className="w-8 h-8" 
-                      style={{ color: isDragging ? '#1E2A26' : '#A8B78A' }} 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                  </div>
-                  <p className="font-medium mb-1" style={{ color: '#f5f5f5' }}>
-                    {isDragging ? 'Dépose ton fichier ici !' : 'Glisse ton fichier ici'}
-                  </p>
-                  <p className="text-sm mb-3" style={{ color: '#A8B78A' }}>
-                    ou clique pour parcourir
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {/* Badge Texte */}
-                    <span 
-                      className="px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1" 
-                      style={{ backgroundColor: 'rgba(168, 183, 138, 0.2)', color: '#A8B78A' }}
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      TXT, DOCX, PDF
-                    </span>
-                    {/* Badge Audio */}
-                    <span 
-                      className="px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1" 
-                      style={{ backgroundColor: 'rgba(181, 138, 255, 0.2)', color: '#B58AFF' }}
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                      </svg>
-                      MP3, WAV
-                    </span>
-                    {/* Badge Vidéo */}
-                    <span 
-                      className="px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1" 
-                      style={{ backgroundColor: 'rgba(215, 224, 140, 0.2)', color: '#D7E08C' }}
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      MP4, WebM
-                    </span>
-                  </div>
-                </>
-              )}
-
+            {/* Titre */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2" style={{ color: '#A8B78A' }}>
+                Titre de la réunion
+              </label>
               <input
-                ref={fileInputRef}
-                type="file"
-                accept={ACCEPTED_EXTENSIONS}
-                onChange={handleFileSelect}
-                className="hidden"
+                id="paste-title-input"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Ex: Réunion projet Alpha"
+                className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-300"
+                style={{ 
+                  backgroundColor: 'rgba(30, 42, 38, 0.8)',
+                  border: '2px solid rgba(168, 183, 138, 0.2)',
+                  color: '#f5f5f5'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#D7E08C';
+                  e.currentTarget.style.boxShadow = '0 0 20px rgba(215, 224, 140, 0.2)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.2)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               />
             </div>
 
-            {/* Limite de taille */}
-            <p className="text-xs text-center mb-6" style={{ color: '#A8B78A' }}>
-              Audio : 2 GB max • Vidéo : 5 GB max • Transcription : 50 MB max
-            </p>
+            {/* Zone de texte */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium" style={{ color: '#A8B78A' }}>
+                  Contenu à analyser
+                </label>
+                <span className="text-xs" style={{ color: '#A8B78A' }}>
+                  {getWordCount()} mots
+                </span>
+              </div>
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Colle ici le texte de ta réunion, tes notes, ou toute transcription..."
+                rows={10}
+                className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-300 resize-none"
+                style={{ 
+                  backgroundColor: 'rgba(30, 42, 38, 0.8)',
+                  border: '2px solid rgba(168, 183, 138, 0.2)',
+                  color: '#f5f5f5'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#D7E08C';
+                  e.currentTarget.style.boxShadow = '0 0 20px rgba(215, 224, 140, 0.2)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.2)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              />
+            </div>
 
             {/* Sélecteur de modèle - Custom Dropdown */}
             <div className="mb-6 relative" ref={dropdownRef}>
@@ -426,9 +312,9 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
                 className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-300 flex items-center justify-between"
                 style={{ 
                   backgroundColor: 'rgba(30, 42, 38, 0.8)',
-                  border: showModelDropdown ? '2px solid #B58AFF' : '2px solid rgba(168, 183, 138, 0.2)',
+                  border: showModelDropdown ? '2px solid #D7E08C' : '2px solid rgba(168, 183, 138, 0.2)',
                   color: '#f5f5f5',
-                  boxShadow: showModelDropdown ? '0 0 20px rgba(181, 138, 255, 0.2)' : 'none'
+                  boxShadow: showModelDropdown ? '0 0 20px rgba(215, 224, 140, 0.2)' : 'none'
                 }}
               >
                 <span>{getSelectedModel()?.name || 'Sélectionner un modèle'}</span>
@@ -458,7 +344,7 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
                 >
                   <div 
                     className="absolute top-0 left-[10%] right-[10%] h-[1px]"
-                    style={{ background: 'linear-gradient(90deg, transparent, #B58AFF, transparent)' }}
+                    style={{ background: 'linear-gradient(90deg, transparent, #D7E08C, transparent)' }}
                   />
                   
                   <div className="py-1">
@@ -471,8 +357,8 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
                         }}
                         className="w-full px-4 py-3 flex items-center justify-between transition-colors text-left"
                         style={{ 
-                          color: selectedModelId === model.id ? '#B58AFF' : '#f5f5f5',
-                          backgroundColor: selectedModelId === model.id ? 'rgba(181, 138, 255, 0.1)' : 'transparent'
+                          color: selectedModelId === model.id ? '#D7E08C' : '#f5f5f5',
+                          backgroundColor: selectedModelId === model.id ? 'rgba(215, 224, 140, 0.1)' : 'transparent'
                         }}
                         onMouseEnter={(e) => {
                           if (selectedModelId !== model.id) {
@@ -489,13 +375,13 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
                         {model.isDefault && (
                           <span 
                             className="text-xs px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: 'rgba(181, 138, 255, 0.2)', color: '#B58AFF' }}
+                            style={{ backgroundColor: 'rgba(215, 224, 140, 0.2)', color: '#D7E08C' }}
                           >
                             défaut
                           </span>
                         )}
                         {selectedModelId === model.id && (
-                          <svg className="w-5 h-5" style={{ color: '#B58AFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" style={{ color: '#D7E08C' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                         )}
@@ -530,19 +416,19 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
                 Annuler
               </button>
               <button
-                onClick={handleImport}
-                disabled={!file || !selectedModelId}
+                onClick={handleSubmit}
+                disabled={!title.trim() || !text.trim() || !selectedModelId}
                 className="flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-300"
                 style={{ 
-                  background: file && selectedModelId 
-                    ? 'linear-gradient(135deg, #B58AFF 0%, #9D6FE8 100%)' 
+                  background: title.trim() && text.trim() && selectedModelId 
+                    ? 'linear-gradient(135deg, #D7E08C 0%, #A8B78A 100%)' 
                     : 'rgba(168, 183, 138, 0.2)',
-                  color: file && selectedModelId ? '#1E2A26' : '#A8B78A',
-                  opacity: file && selectedModelId ? 1 : 0.5,
-                  cursor: file && selectedModelId ? 'pointer' : 'not-allowed'
+                  color: title.trim() && text.trim() && selectedModelId ? '#1E2A26' : '#A8B78A',
+                  opacity: title.trim() && text.trim() && selectedModelId ? 1 : 0.5,
+                  cursor: title.trim() && text.trim() && selectedModelId ? 'pointer' : 'not-allowed'
                 }}
               >
-                Importer & Résumer
+                Analyser & Résumer
               </button>
             </div>
           </>
@@ -551,11 +437,11 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
           <div className="text-center py-8">
             <div 
               className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-              style={{ backgroundColor: 'rgba(181, 138, 255, 0.2)' }}
+              style={{ backgroundColor: 'rgba(215, 224, 140, 0.2)' }}
             >
               <div 
                 className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin"
-                style={{ borderColor: '#B58AFF', borderTopColor: 'transparent' }}
+                style={{ borderColor: '#D7E08C', borderTopColor: 'transparent' }}
               />
             </div>
             
@@ -572,7 +458,7 @@ export default function QuickImportModal({ isOpen, onClose, onSuccess }: QuickIm
                 className="h-full rounded-full transition-all duration-500"
                 style={{ 
                   width: `${progress.percent}%`,
-                  background: 'linear-gradient(90deg, #B58AFF, #A8B78A)'
+                  background: 'linear-gradient(90deg, #D7E08C, #A8B78A)'
                 }}
               />
             </div>
