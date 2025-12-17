@@ -3,7 +3,10 @@
 // Compatible Fastify avec gestion correcte des buffers (pas de streaming)
 
 const PDFDocument = require('pdfkit');
-const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = require('docx');
+const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ImageRun } = require('docx');
+const path = require('path');
+const LOGO_PATH = path.join(__dirname, '..', 'assets', 'memora-logo.png');
+const LOGO_PATH_LIGHT = path.join(__dirname, '..', 'assets', 'memora-logo-light.png');
 
 module.exports = async function (fastify, opts) {
   
@@ -91,9 +94,17 @@ module.exports = async function (fastify, opts) {
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', reject);
 
-        // En-tête
-        doc.fontSize(24).fillColor('#1E2A26').text('MEMORA', { align: 'center' });
-        doc.moveDown(0.5);
+        // En-tête avec logo
+        const fs = require('fs');
+        const pdfLogo = fs.existsSync(LOGO_PATH_LIGHT) ? LOGO_PATH_LIGHT : LOGO_PATH;
+        if (fs.existsSync(pdfLogo)) {
+          doc.image(pdfLogo, 237, 25, { width: 120 });
+          // Positionner le texte après le logo
+          doc.y = 130;
+        } else {
+          doc.fontSize(24).fillColor('#1E2A26').text('MEMORA', { align: 'center' });
+          doc.moveDown(0.5);
+        }
         doc.fontSize(10).fillColor('#666666').text(type === 'transcript' ? 'Transcription' : 'Resume IA', { align: 'center' });
         doc.moveDown(1);
 
@@ -279,13 +290,37 @@ module.exports = async function (fastify, opts) {
 
       const children = [];
 
-      // Titre
+      // Titre avec logo
+      const fs = require('fs');
+      const docxLogo = fs.existsSync(LOGO_PATH_LIGHT) ? LOGO_PATH_LIGHT : LOGO_PATH;
+      if (fs.existsSync(docxLogo)) {
+        const logoBuffer = fs.readFileSync(docxLogo);
+        children.push(
+          new Paragraph({
+            children: [
+              new ImageRun({
+                data: logoBuffer,
+                transformation: {
+                  width: 120,
+                  height: 120
+                },
+                type: 'png'
+              })
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 }
+          })
+        );
+      } else {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: 'MEMORA', bold: true, size: 48, color: '1E2A26' })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 }
+          })
+        );
+      }
       children.push(
-        new Paragraph({
-          children: [new TextRun({ text: 'MEMORA', bold: true, size: 48, color: '1E2A26' })],
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 200 }
-        }),
         new Paragraph({
           children: [new TextRun({ text: type === 'transcript' ? 'Transcription' : 'Resume IA', size: 24, color: '666666' })],
           alignment: AlignmentType.CENTER,

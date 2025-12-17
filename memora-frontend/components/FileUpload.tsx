@@ -21,8 +21,8 @@ interface UploadedFile {
 const ACCEPTED_EXTENSIONS = {
   audio: '.mp3,.wav,.m4a,.ogg,.webm',
   video: '.mp4,.webm,.mov,.avi',
-  transcript: '.vtt,.srt,.txt,.docx',
-  all: '.mp3,.wav,.m4a,.ogg,.webm,.mp4,.mov,.avi,.vtt,.srt,.txt,.docx'
+  transcript: '.vtt,.srt,.txt,.docx,.pdf',
+  all: '.mp3,.wav,.m4a,.ogg,.webm,.mp4,.mov,.avi,.vtt,.srt,.txt,.docx,.pdf'
 };
 
 const CATEGORY_INFO = {
@@ -207,13 +207,13 @@ export default function FileUpload({ onUploadComplete, meetingId, acceptedTypes 
             ) : null}
             {acceptedTypes === 'all' || acceptedTypes === 'transcript' ? (
               <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-medium">
-                📝 VTT, SRT, TXT
+                📝 TXT, DOCX, PDF
               </span>
             ) : null}
           </div>
 
           {/* Limites */}
-          <p className="text-gray-400 text-xs mt-4">
+          <p className="text-gray-600 text-xs mt-4">
             Audio : 2 GB max • Vidéo : 5 GB max • Transcription : 50 MB max
           </p>
 

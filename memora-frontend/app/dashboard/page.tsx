@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import QuickImportModal from '@/components/QuickImportModal';
 import { getMeetings, createMeeting, deleteMeeting, isLoggedIn, logout, getProfile } from '@/lib/api';
 
 interface Meeting {
@@ -26,6 +27,8 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showNewMeeting, setShowNewMeeting] = useState(false);
+  const [showQuickImport, setShowQuickImport] = useState(false);
+  const [showNewMenu, setShowNewMenu] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newPlatform, setNewPlatform] = useState('teams');
   const [creating, setCreating] = useState(false);
@@ -697,29 +700,112 @@ export default function DashboardPage() {
             </p>
           </div>
           
-          {/* Nouvelle réunion button */}
-          <button
-            onClick={() => setShowNewMeeting(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all duration-300"
-            style={{ 
-              background: 'linear-gradient(135deg, #B58AFF 0%, #9D6FE8 100%)',
-              color: '#1E2A26',
-              boxShadow: '0 4px 20px rgba(181, 138, 255, 0.3)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 8px 30px rgba(181, 138, 255, 0.5)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 20px rgba(181, 138, 255, 0.3)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Nouvelle réunion
-          </button>
+          {/* Bouton + avec menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNewMenu(!showNewMenu)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all duration-300"
+              style={{ 
+                background: 'linear-gradient(135deg, #B58AFF 0%, #9D6FE8 100%)',
+                color: '#1E2A26',
+                boxShadow: '0 4px 20px rgba(181, 138, 255, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 8px 30px rgba(181, 138, 255, 0.5)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(181, 138, 255, 0.3)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Nouveau
+              <svg 
+                className="w-4 h-4 transition-transform duration-200" 
+                style={{ transform: showNewMenu ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {/* Menu déroulant */}
+            {showNewMenu && (
+              <div 
+                className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden animate-fade-in z-50"
+                style={{ 
+                  backgroundColor: 'rgba(46, 62, 56, 0.98)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(168, 183, 138, 0.15)',
+                  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)'
+                }}
+              >
+                <div 
+                  className="absolute top-0 left-[10%] right-[10%] h-[1px]"
+                  style={{ background: 'linear-gradient(90deg, transparent, #B58AFF, transparent)' }}
+                />
+                
+                <div className="py-2">
+                  {/* Option 1: Import rapide */}
+                  <button
+                    onClick={() => {
+                      setShowNewMenu(false);
+                      setShowQuickImport(true);
+                    }}
+                    className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
+                    style={{ color: '#f5f5f5' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(181, 138, 255, 0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: 'rgba(181, 138, 255, 0.2)' }}
+                    >
+                      <svg className="w-4 h-4" style={{ color: '#B58AFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <span className="font-medium block">Importer un fichier</span>
+                      <span className="text-xs" style={{ color: '#A8B78A' }}>Audio, vidéo ou texte</span>
+                    </div>
+                  </button>
+                  
+                  <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
+                  
+                  {/* Option 2: Réunion vide */}
+                  <button
+                    onClick={() => {
+                      setShowNewMenu(false);
+                      setShowNewMeeting(true);
+                    }}
+                    className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
+                    style={{ color: '#f5f5f5' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(168, 183, 138, 0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: 'rgba(168, 183, 138, 0.2)' }}
+                    >
+                      <svg className="w-4 h-4" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <span className="font-medium block">Réunion vide</span>
+                      <span className="text-xs" style={{ color: '#A8B78A' }}>Créer manuellement</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Toggle Vue Liste / Cartes */}
@@ -992,6 +1078,16 @@ export default function DashboardPage() {
         ) : (
           viewMode === 'list' ? renderListView() : renderGridView()
         )}
+
+        {/* Modal Import Rapide */}
+        <QuickImportModal
+          isOpen={showQuickImport}
+          onClose={() => setShowQuickImport(false)}
+          onSuccess={(meetingId) => {
+            setShowQuickImport(false);
+            router.push(`/meetings/${meetingId}`);
+          }}
+        />
       </main>
     </div>
   );

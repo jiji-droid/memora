@@ -10,6 +10,12 @@ const path = require('path');
 
 // Dossier pour les exports temporaires
 const EXPORTS_DIR = path.join(__dirname, '..', 'exports');
+const LOGO_PATH = path.join(__dirname, '..', 'assets', 'memora-logo.png');
+
+// Debug au chargement du module
+console.log('=== EXPORT SERVICE LOADED ===');
+console.log('__dirname:', __dirname);
+console.log('LOGO_PATH:', LOGO_PATH);
 
 // Créer le dossier s'il n'existe pas
 if (!fs.existsSync(EXPORTS_DIR)) {
@@ -32,74 +38,95 @@ function formatDate(date) {
 }
 
 /**
+ * Supprime ou remplace les emojis par du texte
+ * PDFKit ne supporte pas les emojis par défaut
+ */
+function removeEmojis(text) {
+  if (!text || typeof text !== 'string') return text;
+  
+  // Remplacer les emojis courants par du texte
+  const emojiReplacements = {
+    '📝': '[Note]',
+    '✅': '[OK]',
+    '❌': '[X]',
+    '⚠️': '[!]',
+    '🎯': '[Objectif]',
+    '💡': '[Idee]',
+    '🔴': '[Rouge]',
+    '🟡': '[Jaune]',
+    '🟢': '[Vert]',
+    '📅': '[Date]',
+    '👤': '[Personne]',
+    '📧': '[Email]',
+    '📞': '[Tel]',
+    '🏢': '[Entreprise]',
+    '💰': '[Budget]',
+    '📊': '[Stats]',
+    '🚀': '[Go]',
+    '⏰': '[Temps]',
+    '📌': '[Important]'
+  };
+  
+  let result = text;
+  for (const [emoji, replacement] of Object.entries(emojiReplacements)) {
+    result = result.split(emoji).join(replacement);
+  }
+  
+  // Supprimer tous les autres emojis restants
+  result = result.replace(/[\u{1F600}-\u{1F64F}]/gu, '');
+  result = result.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
+  result = result.replace(/[\u{1F680}-\u{1F6FF}]/gu, '');
+  result = result.replace(/[\u{1F700}-\u{1F77F}]/gu, '');
+  result = result.replace(/[\u{1F780}-\u{1F7FF}]/gu, '');
+  result = result.replace(/[\u{1F800}-\u{1F8FF}]/gu, '');
+  result = result.replace(/[\u{1F900}-\u{1F9FF}]/gu, '');
+  result = result.replace(/[\u{1FA00}-\u{1FA6F}]/gu, '');
+  result = result.replace(/[\u{1FA70}-\u{1FAFF}]/gu, '');
+  result = result.replace(/[\u{2600}-\u{26FF}]/gu, '');
+  result = result.replace(/[\u{2700}-\u{27BF}]/gu, '');
+  
+  return result;
+}
+
+/**
+ * Extrait le texte brut d'un contenu (peut être string, objet, ou autre)
+ */
+/**
  * Extrait le texte brut d'un contenu (peut être string, objet, ou autre)
  */
 function extractText(content) {
   if (!content) return '';
   
+  let result = '';
+  
   // Si c'est déjà une string
   if (typeof content === 'string') {
-    return content;
+    result = content;
   }
-  
   // Si c'est un objet avec une propriété 'text' ou 'content'
-  if (typeof content === 'object') {
-    if (content.text) return extractText(content.text);
-    if (content.content) return extractText(content.content);
-    if (content.transcript) return extractText(content.transcript);
-    
+  else if (typeof content === 'object') {
+    if (content.text) result = extractText(content.text);
+    else if (content.content) result = extractText(content.content);
+    else if (content.transcript) result = extractText(content.transcript);
     // Si c'est un tableau, joindre les éléments
-    if (Array.isArray(content)) {
-      return content.map(item => extractText(item)).join('\n');
+    else if (Array.isArray(content)) {
+      result = content.map(item => extractText(item)).join('\n');
     }
-    
     // Sinon, essayer de convertir en JSON lisible
-    try {
-      return JSON.stringify(content, null, 2);
-    } catch (e) {
-      return String(content);
-    }
-  }
-  
-  return String(content);
-}
-
-/**
- * Parse les sections d'un résumé
- */
-function parseSections(sections) {
-  if (!sections) return null;
-  
-  try {
-    const parsed = typeof sections === 'string' ? JSON.parse(sections) : sections;
-    
-    if (typeof parsed !== 'object' || parsed === null) return null;
-    
-    // Convertir chaque valeur en texte
-    const result = {};
-    for (const [key, value] of Object.entries(parsed)) {
-      if (Array.isArray(value)) {
-        result[key] = value.map(item => {
-          if (typeof item === 'object') {
-            // Pour les actionItems qui ont une structure {task, assignee, deadline}
-            if (item.task) {
-              let text = item.task;
-              if (item.assignee) text += ` (${item.assignee})`;
-              if (item.deadline) text += ` - ${item.deadline}`;
-              return text;
-            }
-            return JSON.stringify(item);
-          }
-          return String(item);
-        }).join('\n- ');
-      } else {
-        result[key] = extractText(value);
+    else {
+      try {
+        result = JSON.stringify(content, null, 2);
+      } catch (e) {
+        result = String(content);
       }
     }
-    return result;
-  } catch (e) {
-    return null;
   }
+  else {
+    result = String(content);
+  }
+  
+  // Nettoyer les emojis avant de retourner
+  return removeEmojis(result);
 }
 
 /**
@@ -130,14 +157,20 @@ async function generatePDF(meeting, content, type = 'transcript') {
     const textColor = '#1F2937';
     const lightGray = '#9CA3AF';
 
-    // En-tête
-    doc.fontSize(24)
-       .fillColor(primaryColor)
-       .text('Memora', 50, 50);
+    // En-tête avec logo
+    console.log('LOGO_PATH:', LOGO_PATH);
+    console.log('Logo existe:', fs.existsSync(LOGO_PATH));
+    if (fs.existsSync(LOGO_PATH)) {
+      doc.image(LOGO_PATH, 50, 40, { height: 50 });
+    } else {
+      doc.fontSize(24)
+         .fillColor(primaryColor)
+         .text('Memora', 50, 50);
+    }
     
     doc.fontSize(10)
        .fillColor(lightGray)
-       .text('Assistant de reunions IA', 50, 80);
+       .text('Assistant de reunions IA', 50, 95);
 
     // Ligne de séparation
     doc.moveTo(50, 100)

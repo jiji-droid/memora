@@ -17,12 +17,13 @@ const FILE_CONFIG = {
     category: 'video'
   },
   transcript: {
-    extensions: ['.vtt', '.srt', '.txt', '.docx'],
+    extensions: ['.vtt', '.srt', '.txt', '.docx', '.pdf'],
     mimeTypes: [
       'text/vtt', 
       'application/x-subrip', 
       'text/plain', 
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/pdf'
     ],
     maxSize: 50 * 1024 * 1024, // 50 MB - largement suffisant
     category: 'transcript'

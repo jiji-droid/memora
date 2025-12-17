@@ -8,6 +8,8 @@
 const path = require('path');
 const fs = require('fs');
 const transcriptionService = require('../services/transcription');
+const pdf = require('pdf-parse');
+const mammoth = require('mammoth');
 
 // ============================================
 // FONCTIONS DE PARSING POUR FICHIERS TEXTE
@@ -98,9 +100,27 @@ function parseVTT(filePath) {
 }
 
 /**
- * Détermine le type de fichier texte et le parse
+ * Parse un fichier PDF et extrait le texte
  */
-function parseTranscriptFile(filePath, originalName) {
+async function parsePDF(filePath) {
+  const dataBuffer = fs.readFileSync(filePath);
+  const data = await pdf(dataBuffer);
+  return data.text.trim();
+}
+
+/**
+ * Parse un fichier DOCX et extrait le texte
+ */
+async function parseDOCX(filePath) {
+  const result = await mammoth.extractRawText({ path: filePath });
+  return result.value.trim();
+}
+
+/**
+ * Détermine le type de fichier texte et le parse
+ * Supporte: TXT, SRT, VTT, PDF, DOCX
+ */
+async function parseTranscriptFile(filePath, originalName) {
   const ext = path.extname(originalName).toLowerCase();
   
   switch (ext) {
@@ -110,6 +130,10 @@ function parseTranscriptFile(filePath, originalName) {
       return parseSRT(filePath);
     case '.vtt':
       return parseVTT(filePath);
+    case '.pdf':
+      return await parsePDF(filePath);
+    case '.docx':
+      return await parseDOCX(filePath);
     default:
       throw new Error(`Format non supporté: ${ext}`);
   }
@@ -190,7 +214,7 @@ async function transcriptionRoutes(fastify, options) {
         console.log(`[API] Import texte direct pour fichier ${fileId}`);
         
         try {
-          const textContent = parseTranscriptFile(filePath, file.original_name);
+          const textContent = await parseTranscriptFile(filePath, file.original_name);
           
           if (!textContent || textContent.length === 0) {
             throw new Error('Le fichier est vide ou ne contient pas de texte valide');
@@ -390,7 +414,7 @@ async function transcriptionRoutes(fastify, options) {
         provider: 'deepgram',
         model: 'nova-2',
         costPerMinute: 0.0043,
-        supportedTextFormats: ['txt', 'srt', 'vtt']
+        supportedTextFormats: ['txt', 'srt', 'vtt', 'pdf', 'docx']
       }
     });
   });
