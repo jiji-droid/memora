@@ -63,7 +63,7 @@ async function recallRoutes(fastify) {
       // Crée le bot via Recall.ai
       const bot = await recallService.createBot(
         meetingUrl, 
-        botName || 'Memora Notetaker'
+        botName || 'Memora.AI'
       );
 
       // Détecte la plateforme
@@ -204,7 +204,7 @@ async function recallRoutes(fastify) {
       // 2. Crée le bot via Recall.ai
       const bot = await recallService.createBot(
         meetingUrl,
-        botName || 'Memora Notetaker'
+        botName || 'Memora.AI'
       );
 
       // 3. Crée la réunion dans Memora (status: recording)
