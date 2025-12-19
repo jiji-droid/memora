@@ -10,6 +10,7 @@ const uploadsRoutes = require('./routes/uploads');
 const transcriptionsRoutes = require('./routes/transcriptions');
 const searchRoutes = require('./routes/search');
 const exportRoutes = require('./routes/export');
+const recallRoutes = require('./routes/recall');
 
 // Configuration
 const PORT = process.env.PORT || 3001;
@@ -57,6 +58,7 @@ fastify.register(transcriptionsRoutes);
 fastify.register(searchRoutes);
 fastify.register(exportRoutes);
 fastify.register(require('./routes/summary-models'));
+fastify.register(recallRoutes);
 
 // Route de test
 fastify.get('/', async (request, reply) => {
