@@ -31,6 +31,8 @@ export default function CaptureModal({ isOpen, onClose }: CaptureModalProps) {
   const [meetingId, setMeetingId] = useState<string | null>(null);
   const [botStatus, setBotStatus] = useState<string>('created');
   const [displayPercent, setDisplayPercent] = useState(0);
+  const [showConsent, setShowConsent] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
   
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
@@ -132,7 +134,8 @@ export default function CaptureModal({ isOpen, onClose }: CaptureModalProps) {
   };
 
   // Soumettre - Appel API Recall.ai
-  const handleSubmit = async () => {
+// Étape 1 : Afficher le consentement
+  const handleSubmit = () => {
     if (!meetingUrl.trim()) {
       setError('Colle un lien de réunion');
       return;
@@ -148,11 +151,38 @@ export default function CaptureModal({ isOpen, onClose }: CaptureModalProps) {
       return;
     }
 
+    // Afficher l'écran de consentement
+    setError('');
+    setShowConsent(true);
+  };
+
+  // Étape 2 : Après consentement, lancer la capture
+  const handleStartCapture = async () => {
+    if (!consentChecked) {
+      setError('Tu dois cocher la case pour continuer');
+      return;
+    }
+
+    const token = localStorage.getItem('memora_token');
     setLoading(true);
     setError('');
 
     try {
-      const meetingTitle = title.trim() || `Réunion ${platform.name} - ${new Date().toLocaleDateString('fr-FR')}`;
+      // 1. Enregistrer le consentement
+      await fetch('http://localhost:3001/recall/consent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          meetingUrl: meetingUrl.trim(),
+          consentType: 'recording'
+        })
+      });
+
+      // 2. Lancer la capture
+      const meetingTitle = title.trim() || `Réunion ${platform?.name} - ${new Date().toLocaleDateString('fr-FR')}`;
 
       const response = await fetch('http://localhost:3001/recall/capture', {
         method: 'POST',
@@ -177,6 +207,7 @@ export default function CaptureModal({ isOpen, onClose }: CaptureModalProps) {
       setMeetingId(data.data?.meetingId);
       setBotStatus('joining');
       setDisplayPercent(5);
+      setShowConsent(false);
       setIsCapturing(true);
 
     } catch (err: any) {
@@ -246,7 +277,140 @@ export default function CaptureModal({ isOpen, onClose }: CaptureModalProps) {
         </div>
 
         {/* CONTENU PRINCIPAL */}
-        {isCapturing ? (
+{showConsent ? (
+  /* ===== MODE CONSENTEMENT LOI 25 ===== */
+  <div className="py-2">
+    {/* Icône alerte */}
+    <div className="flex justify-center mb-4">
+      <div
+        className="w-16 h-16 rounded-full flex items-center justify-center"
+        style={{
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.05) 100%)',
+          border: '2px solid #F59E0B'
+        }}
+      >
+        <svg className="w-8 h-8" style={{ color: '#F59E0B' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+    </div>
+
+    {/* Titre */}
+    <h3 className="text-center text-lg font-bold mb-4" style={{ color: '#F59E0B' }}>
+      Consentement requis
+    </h3>
+
+    {/* Texte explicatif */}
+    <div
+      className="p-4 rounded-xl mb-4 text-sm"
+      style={{
+        backgroundColor: 'rgba(30, 42, 38, 0.8)',
+        border: '1px solid rgba(168, 183, 138, 0.2)',
+        color: '#d1d5db'
+      }}
+    >
+      <p className="mb-3">
+        Vous êtes sur le point d'enregistrer et de transcrire cette réunion.
+      </p>
+      <p className="font-medium mb-2 flex items-center gap-2" style={{ color: '#A8B78A' }}>
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+  </svg>
+  Ce qui sera collecté :
+</p>
+      <ul className="list-disc list-inside mb-3 space-y-1" style={{ color: '#9ca3af' }}>
+        <li>L'audio de la réunion</li>
+        <li>La transcription textuelle</li>
+        <li>Les noms des participants (si disponibles)</li>
+      </ul>
+      <p className="text-xs" style={{ color: '#6b7280' }}>
+        ⏱️ Conservation : 12 mois (modifiable dans les paramètres)
+      </p>
+    </div>
+
+    {/* Checkbox consentement */}
+    <label
+      className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all"
+      style={{
+        backgroundColor: consentChecked ? 'rgba(168, 183, 138, 0.1)' : 'transparent',
+        border: `2px solid ${consentChecked ? '#A8B78A' : 'rgba(168, 183, 138, 0.3)'}`
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={consentChecked}
+        onChange={(e) => setConsentChecked(e.target.checked)}
+        className="mt-1 w-5 h-5 rounded"
+        style={{ accentColor: '#A8B78A' }}
+      />
+      <span className="text-sm" style={{ color: '#f5f5f5' }}>
+  Je <strong>m'engage à informer tous les participants</strong> de cette réunion, avant ou dès le début, que celle-ci sera enregistrée et transcrite. Je confirme être autorisé(e) à effectuer cet enregistrement.
+</span>
+    </label>
+
+    {/* Note légale */}
+    <p className="text-xs mt-3 text-center" style={{ color: '#6b7280' }}>
+      * Requis par la Loi 25 (Québec) sur la protection des renseignements personnels
+    </p>
+
+    {/* Message d'erreur */}
+    {error && (
+      <div
+        className="mt-4 p-3 rounded-xl text-sm"
+        style={{
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          color: '#f87171'
+        }}
+      >
+        {error}
+      </div>
+    )}
+
+    {/* Boutons */}
+    <div className="flex gap-3 mt-6">
+      <button
+        onClick={() => {
+          setShowConsent(false);
+          setConsentChecked(false);
+          setError('');
+        }}
+        className="flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-300"
+        style={{
+          backgroundColor: 'transparent',
+          border: '2px solid rgba(168, 183, 138, 0.3)',
+          color: '#A8B78A'
+        }}
+      >
+        Retour
+      </button>
+      <button
+        onClick={handleStartCapture}
+        disabled={loading || !consentChecked}
+        className="flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2"
+        style={{
+          background: consentChecked ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : 'rgba(107, 114, 128, 0.3)',
+          color: consentChecked ? '#fff' : '#6b7280',
+          opacity: loading ? 0.7 : 1
+        }}
+      >
+        {loading ? (
+          <>
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+            Envoi...
+          </>
+        ) : (
+          <>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Commencer la capture
+          </>
+        )}
+      </button>
+    </div>
+  </div>
+) : isCapturing ? (
           /* ===== MODE CAPTURE EN COURS ===== */
           <div className="py-4">
             {/* Icône animée */}

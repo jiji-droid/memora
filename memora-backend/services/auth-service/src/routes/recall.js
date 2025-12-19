@@ -546,6 +546,49 @@ console.log('====================');
       });
     }
   });
+
+// ============================================
+  // CONSENTEMENT LOI 25 : POST /recall/consent
+  // ============================================
+  fastify.post('/recall/consent', { preHandler: authenticate }, async (request, reply) => {
+    const { meetingUrl, consentType } = request.body;
+    const userId = request.user.userId;
+
+    const consentText = `Je confirme avoir informé tous les participants de cette réunion que celle-ci sera enregistrée et transcrite par MEMORA. J'ai obtenu leur accord conformément à la Loi 25 (Québec) sur la protection des renseignements personnels.`;
+
+    try {
+      const result = await db.query(
+        `INSERT INTO consent_logs (user_id, consent_type, consent_text, consent_version, ip_address, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, created_at`,
+        [
+          userId,
+          consentType || 'recording',
+          consentText,
+          '1.0',
+          request.ip || 'unknown',
+          request.headers['user-agent'] || 'unknown'
+        ]
+      );
+
+      return reply.status(201).send({
+        success: true,
+        message: 'Consentement enregistré',
+        data: {
+          consentId: result.rows[0].id,
+          createdAt: result.rows[0].created_at
+        }
+      });
+
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Erreur lors de l\'enregistrement du consentement: ' + error.message
+      });
+    }
+  });
+
 }
 
 module.exports = recallRoutes;
