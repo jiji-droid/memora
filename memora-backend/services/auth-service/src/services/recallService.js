@@ -16,7 +16,7 @@ const RECALL_API_BASE = 'https://us-west-2.recall.ai/api/v1';
  * @param {string} botName - Le nom affiché du bot (ex: "Memora Notetaker")
  * @returns {Object} - Les infos du bot créé (id, status, etc.)
  */
-async function createBot(meetingUrl, botName = 'Memora Notetaker') {
+async function createBot(meetingUrl, botName = 'Memora.AI') {
   const response = await fetch(`${RECALL_API_BASE}/bot`, {
     method: 'POST',
     headers: {
@@ -87,13 +87,16 @@ async function getTranscript(botId) {
 }
 
 /**
- * Récupère l'URL de l'enregistrement vidéo
+ * Récupère l'URL de l'enregistrement audio/video
  * 
  * @param {string} botId - L'ID du bot Recall.ai
- * @returns {Object} - L'URL de l'enregistrement (valide 1 heure)
+ * @returns {string} - L'URL de téléchargement de l'audio
  */
-async function getRecording(botId) {
-  const response = await fetch(`${RECALL_API_BASE}/bot/${botId}/recording`, {
+async function getRecordingUrl(botId) {
+  console.log(`📹 Récupération des infos du bot ${botId}...`);
+  
+  // 1. Récupère les infos complètes du bot
+  const response = await fetch(`${RECALL_API_BASE}/bot/${botId}`, {
     method: 'GET',
     headers: {
       'Authorization': `Token ${process.env.RECALL_API_KEY}`
@@ -101,11 +104,43 @@ async function getRecording(botId) {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Erreur Recall.ai: ${JSON.stringify(error)}`);
+    const error = await response.text();
+    throw new Error(`Erreur Recall.ai (${response.status}): ${error.substring(0, 200)}`);
   }
 
-  return await response.json();
+  const botData = await response.json();
+  console.log(`📹 Bot data reçue, recherche de l'URL audio...`);
+  
+  // 2. Cherche l'URL dans les recordings
+  const recordings = botData.recordings || [];
+  
+  if (recordings.length === 0) {
+    throw new Error('Aucun enregistrement trouvé pour ce bot');
+  }
+
+  const recording = recordings[0];
+  const mediaShortcuts = recording.media_shortcuts || {};
+  
+  // 3. Cherche audio ou video
+  let downloadUrl = null;
+  
+  // Essaie audio_mixed d'abord (plus léger)
+  if (mediaShortcuts.audio_mixed?.data?.download_url) {
+    downloadUrl = mediaShortcuts.audio_mixed.data.download_url;
+    console.log('📹 URL audio trouvée !');
+  }
+  // Sinon video_mixed
+  else if (mediaShortcuts.video_mixed?.data?.download_url) {
+    downloadUrl = mediaShortcuts.video_mixed.data.download_url;
+    console.log('📹 URL vidéo trouvée !');
+  }
+  
+  if (!downloadUrl) {
+    console.log('📹 Media shortcuts:', JSON.stringify(mediaShortcuts, null, 2));
+    throw new Error('Aucune URL de téléchargement trouvée dans les media_shortcuts');
+  }
+  
+  return downloadUrl;
 }
 
 /**
@@ -167,7 +202,7 @@ module.exports = {
   createBot,
   getBotStatus,
   getTranscript,
-  getRecording,
+  getRecordingUrl,
   stopBot,
   formatTranscriptToText,
   detectPlatform

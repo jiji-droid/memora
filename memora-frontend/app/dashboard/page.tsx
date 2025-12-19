@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import QuickImportModal from '@/components/QuickImportModal';
 import PasteTextModal from '@/components/PasteTextModal';
+import CaptureModal from '@/components/CaptureModal';
 import { getMeetings, createMeeting, deleteMeeting, updateMeeting, isLoggedIn, logout, getProfile } from '@/lib/api';
 
 interface Meeting {
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [showQuickImport, setShowQuickImport] = useState(false);
   const [showPasteText, setShowPasteText] = useState(false);
   const [showNewMenu, setShowNewMenu] = useState(false);
+  const [showCapture, setShowCapture] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newPlatform, setNewPlatform] = useState('teams');
   const [creating, setCreating] = useState(false);
@@ -796,147 +798,178 @@ export default function DashboardPage() {
       </header>
 
       {/* Main */}
-      <main className="relative z-0 max-w-6xl mx-auto px-4 py-8">
-        {/* Title and buttons */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#f5f5f5' }}>
-              Mes réunions
-            </h1>
-            <p style={{ color: '#A8B78A' }} className="mt-1">
-              {meetings.length} réunion{meetings.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-          
-          {/* Bouton + avec menu */}
-          <div className="relative">
+<main className="relative z-0 max-w-6xl mx-auto px-4 py-8">
+  {/* Title and buttons */}
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+      <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#f5f5f5' }}>
+        Mes réunions
+      </h1>
+      <p style={{ color: '#A8B78A' }} className="mt-1">
+        {meetings.length} réunion{meetings.length !== 1 ? 's' : ''}
+      </p>
+    </div>
+    
+    {/* Bouton + avec menu */}
+    <div className="relative">
+      <button
+        onClick={() => setShowNewMenu(!showNewMenu)}
+        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all duration-300"
+        style={{ 
+          background: 'linear-gradient(135deg, #B58AFF 0%, #9D6FE8 100%)',
+          color: '#1E2A26',
+          boxShadow: '0 4px 20px rgba(181, 138, 255, 0.3)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = '0 8px 30px rgba(181, 138, 255, 0.5)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = '0 4px 20px rgba(181, 138, 255, 0.3)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+        Nouveau
+        <svg 
+          className="w-4 h-4 transition-transform duration-200" 
+          style={{ transform: showNewMenu ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      
+      {showNewMenu && (
+        <div 
+          className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden animate-fade-in z-50"
+          style={{ 
+            backgroundColor: 'rgba(46, 62, 56, 0.98)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(168, 183, 138, 0.15)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)'
+          }}
+        >
+          <div 
+            className="absolute top-0 left-[10%] right-[10%] h-[1px]"
+            style={{ background: 'linear-gradient(90deg, transparent, #B58AFF, transparent)' }}
+          />
+          <div className="py-2">
+            {/* 1. Capturer en direct */}
             <button
-              onClick={() => setShowNewMenu(!showNewMenu)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all duration-300"
-              style={{ 
-                background: 'linear-gradient(135deg, #B58AFF 0%, #9D6FE8 100%)',
-                color: '#1E2A26',
-                boxShadow: '0 4px 20px rgba(181, 138, 255, 0.3)'
+              onClick={() => {
+                setShowNewMenu(false);
+                setShowCapture(true);
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 8px 30px rgba(181, 138, 255, 0.5)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(181, 138, 255, 0.3)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
+              className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
+              style={{ color: '#f5f5f5' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(6, 182, 212, 0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Nouveau
-              <svg 
-                className="w-4 h-4 transition-transform duration-200" 
-                style={{ transform: showNewMenu ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(6, 182, 212, 0.2)' }}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+                <svg className="w-4 h-4" style={{ color: '#06B6D4' }} fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                </svg>
+              </div>
+              <div className="text-left">
+                <span className="font-medium block">Capturer en direct</span>
+                <span className="text-xs" style={{ color: '#A8B78A' }}>Zoom, Teams, Meet</span>
+              </div>
+            </button>
+
+            <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
+
+            {/* 2. Importer un fichier */}
+            <button
+              onClick={() => {
+                setShowNewMenu(false);
+                setShowQuickImport(true);
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
+              style={{ color: '#f5f5f5' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(181, 138, 255, 0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(181, 138, 255, 0.2)' }}
+              >
+                <svg className="w-4 h-4" style={{ color: '#B58AFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </div>
+              <div className="text-left">
+                <span className="font-medium block">Importer un fichier</span>
+                <span className="text-xs" style={{ color: '#A8B78A' }}>Audio, vidéo ou texte</span>
+              </div>
             </button>
             
-            {showNewMenu && (
+            <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
+            
+            {/* 3. Coller du texte */}
+            <button
+              onClick={() => {
+                setShowNewMenu(false);
+                setShowPasteText(true);
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
+              style={{ color: '#f5f5f5' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(215, 224, 140, 0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
               <div 
-                className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden animate-fade-in z-50"
-                style={{ 
-                  backgroundColor: 'rgba(46, 62, 56, 0.98)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(168, 183, 138, 0.15)',
-                  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)'
-                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(215, 224, 140, 0.2)' }}
               >
-                <div 
-                  className="absolute top-0 left-[10%] right-[10%] h-[1px]"
-                  style={{ background: 'linear-gradient(90deg, transparent, #B58AFF, transparent)' }}
-                />
-                <div className="py-2">
-                  <button
-                    onClick={() => {
-                      setShowNewMenu(false);
-                      setShowQuickImport(true);
-                    }}
-                    className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
-                    style={{ color: '#f5f5f5' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(181, 138, 255, 0.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: 'rgba(181, 138, 255, 0.2)' }}
-                    >
-                      <svg className="w-4 h-4" style={{ color: '#B58AFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                    </div>
-                    <div className="text-left">
-                      <span className="font-medium block">Importer un fichier</span>
-                      <span className="text-xs" style={{ color: '#A8B78A' }}>Audio, vidéo ou texte</span>
-                    </div>
-                  </button>
-                  
-                  <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
-                  
-                  <button
-                    onClick={() => {
-                      setShowNewMenu(false);
-                      setShowPasteText(true);
-                    }}
-                    className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
-                    style={{ color: '#f5f5f5' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(215, 224, 140, 0.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: 'rgba(215, 224, 140, 0.2)' }}
-                    >
-                      <svg className="w-4 h-4" style={{ color: '#D7E08C' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <div className="text-left">
-                      <span className="font-medium block">Coller du texte</span>
-                      <span className="text-xs" style={{ color: '#A8B78A' }}>Copier-coller manuel</span>
-                    </div>
-                  </button>
-
-                  <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
-                  
-                  <button
-                    onClick={() => {
-                      setShowNewMenu(false);
-                      setShowNewMeeting(true);
-                    }}
-                    className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
-                    style={{ color: '#f5f5f5' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(168, 183, 138, 0.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: 'rgba(168, 183, 138, 0.2)' }}
-                    >
-                      <svg className="w-4 h-4" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                    </div>
-                    <div className="text-left">
-                      <span className="font-medium block">Réunion vide</span>
-                      <span className="text-xs" style={{ color: '#A8B78A' }}>Créer manuellement</span>
-                    </div>
-                  </button>
-                </div>
+                <svg className="w-4 h-4" style={{ color: '#D7E08C' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
               </div>
-            )}
+              <div className="text-left">
+                <span className="font-medium block">Coller du texte</span>
+                <span className="text-xs" style={{ color: '#A8B78A' }}>Copier-coller manuel</span>
+              </div>
+            </button>
+
+            <div className="mx-3 my-1 h-px" style={{ backgroundColor: 'rgba(168, 183, 138, 0.1)' }} />
+            
+            {/* 4. Réunion vide */}
+            <button
+              onClick={() => {
+                setShowNewMenu(false);
+                setShowNewMeeting(true);
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
+              style={{ color: '#f5f5f5' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(168, 183, 138, 0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(168, 183, 138, 0.2)' }}
+              >
+                <svg className="w-4 h-4" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div className="text-left">
+                <span className="font-medium block">Réunion vide</span>
+                <span className="text-xs" style={{ color: '#A8B78A' }}>Créer manuellement</span>
+              </div>
+            </button>
           </div>
         </div>
+      )}
+    </div>
+  </div>
+
 
         {/* Toggle Vue */}
         {meetings.length > 0 && (
@@ -1225,6 +1258,11 @@ export default function DashboardPage() {
             setShowPasteText(false);
             router.push(`/meetings/${meetingId}`);
           }}
+        />
+
+        <CaptureModal
+          isOpen={showCapture}
+          onClose={() => setShowCapture(false)}
         />
       </main>
     </div>
