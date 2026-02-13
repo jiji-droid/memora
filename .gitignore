@@ -1,26 +1,56 @@
-# ========================================
-# MEMORA - Fichiers à ignorer par Git
-# ========================================
+# =============================================
+# GESTIMATECH — .gitignore standard v2.0
+# Securite renforcee — 2026-02-13
+# =============================================
 
-# === SECRETS (TRÈS IMPORTANT) ===
+# === SECRETS ET CREDENTIALS (CRITIQUE — NE JAMAIS COMMITER) ===
 .env
+.env.*
 .env.local
 .env.production
-*.pem
-*.key
+*.env
+**/.mcp.json
+.claude/settings.local.json
+**/credentials.json
+**/secrets.json
+**/service-account*.json
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.jks
+**/id_rsa*
 
-# === Dépendances ===
+# === SCRATCHPAD ===
+scratchpad/
+
+# === EXPORTS POWER AUTOMATE ===
+flow-*-definition.json
+flow-*-clientdata*.json
+flow-*-raw.txt
+flow-*-formatted.json
+flow-*-analysis.txt
+
+# === ARTEFACTS ONEDRIVE ===
+_ul
+_ul-*
+*-DESKTOP-*
+
+# === NODE ===
 node_modules/
 .pnp/
 .pnp.js
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# === Build ===
+# === BUILD (Next.js) ===
 .next/
 out/
 build/
 dist/
 
-# === Fichiers uploadés par les utilisateurs ===
+# === FICHIERS UPLOADES PAR LES UTILISATEURS ===
 uploads/
 *.mp3
 *.wav
@@ -28,22 +58,41 @@ uploads/
 *.mp4
 *.webm
 
-# === Logs ===
-logs/
-*.log
-npm-debug.log*
-
-# === OS ===
-.DS_Store
-Thumbs.db
-
 # === IDE ===
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
 
-# === Divers ===
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === LOGS ===
+logs/
+*.log
+
+# === TEMPORAIRES ===
+tmp/
+temp/
+*.tmp
+*.temp
+~$*
+
+# === BACKUPS ===
+*.bak
+*.backup
+
+# === DATABASES LOCALES ===
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql
+
+# === COVERAGE ===
 coverage/
 .nyc_output/
 *.tgz
