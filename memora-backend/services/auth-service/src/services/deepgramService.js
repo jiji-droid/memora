@@ -16,7 +16,7 @@ const DEEPGRAM_API_BASE = 'https://api.deepgram.com/v1';
 async function transcribeFromUrl(audioUrl, language = 'fr') {
   console.log(`🎤 Deepgram: Transcription de ${audioUrl.substring(0, 50)}...`);
 
-  const response = await fetch(`${DEEPGRAM_API_BASE}/listen?language=${language}&punctuate=true&diarize=true&utterances=true`, {
+  const response = await fetch(`${DEEPGRAM_API_BASE}/listen?model=nova-2&language=${language}&punctuate=true&diarize=true&utterances=true&smart_format=true`, {
     method: 'POST',
     headers: {
       'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,

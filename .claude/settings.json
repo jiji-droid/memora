@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Edit(**)",
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(curl *)",
+      "Bash(powershell *)",
+      "Bash(pwsh *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(attrib *)",
+      "Bash(gh *)",
+      "Bash(cd *)",
+      "Bash(pwd)",
+      "Bash(echo *)",
+      "Bash(type *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(del *)",
+      "Bash(format *)",
+      "Bash(shutdown *)",
+      "Bash(sudo *)"
+    ]
+  }
+}
