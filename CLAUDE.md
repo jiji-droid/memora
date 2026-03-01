@@ -17,10 +17,10 @@
 
 | Metrique | Valeur |
 |----------|--------|
-| **Avancement global** | 25% |
-| **Phase actuelle** | Phase 1 — "Mon outil" (étape 1.1 backend complète) |
+| **Avancement global** | 35% |
+| **Phase actuelle** | Phase 1 — "Mon outil" (étapes 1.1 + 1.2 backend complètes) |
 | **Derniere session** | 2026-03-01 |
-| **Prochaine action** | Étape 1.2 — Intégration Qdrant + recherche sémantique, ou Étape 1.4 — Refactorer frontend |
+| **Prochaine action** | Étape 1.3 — Pipeline audio (Deepgram), ou Étape 1.4 — Refactorer frontend |
 | **Bloquant** | Aucun |
 
 ### Phases et avancement detaille
@@ -29,7 +29,7 @@
 |-------|-------------|------------|--------|
 | Phase 0 | Cadrage, stack technique, code initial | 100% | Terminé |
 | Phase 0.5 | PRD, architecture, roadmap | 100% | Terminé (2026-02-24) |
-| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 25% | En cours (étape 1.1 backend ✅) |
+| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 35% | En cours (étapes 1.1 + 1.2 ✅) |
 | Phase 2 | "Mobile" — PWA, notes vocales, recherche | 0% | Pas commencé |
 | Phase 3 | "Intégrations" — Bot meeting, Wrike, création tâches | 0% | Pas commencé |
 | Phase 4 | "SaaS public" — Multi-user, Stripe, landing page | 0% | Pas commencé |
@@ -42,6 +42,7 @@
 | 2026-02-24 | 2h | Revue complète du projet, PRD.md, architecture.md, ROADMAP.md, mise à jour CLAUDE.md | 5% → 10% |
 | 2026-03-01 | 1h | Étape 1.1 : nouveau schéma DB (spaces, sources, conversations, messages), routes CRUD /spaces et /sources, branchement index.js, tests curl OK | 10% → 15% |
 | 2026-03-01 | 0.75h | Étape 1.1 suite : PLAN-PHASE1.md (architecte), conversations.js (4 endpoints), chatService.js (pipeline chat IA mode dégradé), chat.js, standardisation auth/logs sur spaces+sources, suppression 8 fichiers legacy | 15% → 25% |
+| 2026-03-01 | 0.25h | Étape 1.2 : embeddingService (OpenAI), chunkingService (500 chars, overlap), qdrantService (5 fonctions), indexationService (pipeline), route search, indexation async sources, fallback PG dans chat, 926 insertions | 25% → 35% |
 
 ---
 
