@@ -127,7 +127,8 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="vous@exemple.com"
-                    className="input pl-12"
+                    className="input"
+                    style={{ paddingLeft: '3rem' }}
                   />
                 </div>
               </div>
@@ -146,7 +147,8 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    className="input pl-12 pr-12"
+                    className="input"
+                    style={{ paddingLeft: '3rem', paddingRight: '3rem' }}
                   />
                   <button
                     type="button"
