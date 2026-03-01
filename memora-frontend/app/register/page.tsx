@@ -106,7 +106,7 @@ export default function RegisterPage() {
           <div className="text-center mb-6">
             <Link href="/" className="inline-block">
               <div className="flex items-center justify-center gap-3 mb-4">
-                <svg width="40" height="40" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="48" height="48" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <defs>
                     <linearGradient id="reg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor="#09307e" />
@@ -116,6 +116,14 @@ export default function RegisterPage() {
                   <circle cx="40" cy="40" r="36" stroke="url(#reg-grad)" strokeWidth="3" fill="none" opacity="0.2" />
                   <circle cx="40" cy="40" r="16" fill="#09307e" opacity="0.15" />
                   <circle cx="40" cy="40" r="6" fill="#09307e" />
+                  <circle cx="22" cy="22" r="4" fill="#09307e" opacity="0.6" />
+                  <circle cx="58" cy="22" r="4" fill="#1155a8" opacity="0.6" />
+                  <circle cx="22" cy="58" r="4" fill="#f58820" opacity="0.6" />
+                  <circle cx="58" cy="58" r="4" fill="#f5a623" opacity="0.6" />
+                  <line x1="40" y1="40" x2="22" y2="22" stroke="#09307e" strokeWidth="1.5" opacity="0.3" />
+                  <line x1="40" y1="40" x2="58" y2="22" stroke="#09307e" strokeWidth="1.5" opacity="0.3" />
+                  <line x1="40" y1="40" x2="22" y2="58" stroke="#f58820" strokeWidth="1.5" opacity="0.3" />
+                  <line x1="40" y1="40" x2="58" y2="58" stroke="#f58820" strokeWidth="1.5" opacity="0.3" />
                 </svg>
                 <span className="text-2xl font-bold text-[#09307e]">Memoras</span>
               </div>
