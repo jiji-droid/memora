@@ -258,7 +258,10 @@ button, a, [role="button"], input[type="submit"], input[type="button"] {
 
 .input {
   width: 100%;
-  padding: 12px 16px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  padding-left: 16px;
+  padding-right: 16px;
   font-size: 16px;
   font-family: var(--font-family);
   border: 2px solid var(--color-border);
