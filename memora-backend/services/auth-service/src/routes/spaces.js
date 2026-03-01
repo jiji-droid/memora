@@ -11,6 +11,7 @@
  */
 
 const db = require('../db');
+const qdrant = require('../services/qdrantService');
 
 /**
  * Configure les routes des espaces
@@ -300,6 +301,14 @@ async function spacesRoutes(fastify) {
           success: false,
           error: 'Espace non trouvé'
         });
+      }
+
+      // Supprimer la collection Qdrant de l'espace (ne bloque pas si Qdrant down)
+      try {
+        await qdrant.supprimerCollectionEspace(parseInt(spaceId));
+      } catch (erreurQdrant) {
+        console.error(`[Spaces DELETE] Erreur suppression collection Qdrant espace ${spaceId} :`, erreurQdrant.message);
+        // Ne pas bloquer — l'espace est déjà supprimé en DB
       }
 
       return reply.send({

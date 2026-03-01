@@ -11,6 +11,8 @@
  */
 
 const db = require('../db');
+const indexation = require('../services/indexationService');
+const qdrant = require('../services/qdrantService');
 
 /**
  * Vérifie que l'espace appartient à l'utilisateur
@@ -167,6 +169,20 @@ async function sourcesRoutes(fastify) {
         [spaceId]
       );
 
+      // Indexation Qdrant en asynchrone (ne bloque pas la réponse HTTP)
+      if (src.content && src.content.trim().length > 0) {
+        setImmediate(async () => {
+          try {
+            await indexation.indexerContenu(spaceId, src.id, src.content, {
+              type: src.type,
+              nom: src.nom
+            });
+          } catch (erreurIndexation) {
+            console.error(`[Sources POST] Erreur indexation async source ${src.id} :`, erreurIndexation.message);
+          }
+        });
+      }
+
       return reply.status(201).send({
         success: true,
         message: 'Source ajoutée !',
@@ -282,6 +298,8 @@ async function sourcesRoutes(fastify) {
         });
       }
 
+      const spaceIdSource = checkResult.rows[0].space_id;
+
       const result = await db.query(
         `UPDATE sources SET
           nom = COALESCE($1, nom),
@@ -299,6 +317,20 @@ async function sourcesRoutes(fastify) {
       );
 
       const src = result.rows[0];
+
+      // Ré-indexation Qdrant en asynchrone si le contenu a changé
+      if (content && content.trim().length > 0) {
+        setImmediate(async () => {
+          try {
+            await indexation.indexerContenu(spaceIdSource, src.id, src.content, {
+              type: src.type,
+              nom: src.nom
+            });
+          } catch (erreurIndexation) {
+            console.error(`[Sources PUT] Erreur ré-indexation async source ${src.id} :`, erreurIndexation.message);
+          }
+        });
+      }
 
       return reply.send({
         success: true,
@@ -350,15 +382,25 @@ async function sourcesRoutes(fastify) {
         });
       }
 
+      const sourceSuprimee = result.rows[0];
+
+      // Supprimer les vecteurs Qdrant de cette source
+      try {
+        await qdrant.supprimerSource(sourceSuprimee.space_id, parseInt(sourceSuprimee.id));
+      } catch (erreurQdrant) {
+        console.error(`[Sources DELETE] Erreur suppression Qdrant source ${sourceSuprimee.id} :`, erreurQdrant.message);
+        // Ne pas bloquer — la source est déjà supprimée en DB
+      }
+
       // Met à jour le updated_at de l'espace parent
       await db.query(
         'UPDATE spaces SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-        [result.rows[0].space_id]
+        [sourceSuprimee.space_id]
       );
 
       return reply.send({
         success: true,
-        message: `Source "${result.rows[0].nom}" supprimée`
+        message: `Source "${sourceSuprimee.nom}" supprimée`
       });
 
     } catch (error) {

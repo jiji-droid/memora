@@ -7,6 +7,7 @@ const spacesRoutes = require('./routes/spaces');
 const sourcesRoutes = require('./routes/sources');
 const conversationsRoutes = require('./routes/conversations');
 const chatRoutes = require('./routes/chat');
+const searchRoutes = require('./routes/search');
 
 // Configuration
 const PORT = process.env.PORT || 3001;
@@ -50,6 +51,7 @@ fastify.register(spacesRoutes);
 fastify.register(sourcesRoutes);
 fastify.register(conversationsRoutes);
 fastify.register(chatRoutes);
+fastify.register(searchRoutes);
 fastify.register(require('./routes/summary-models'));
 
 // Route de test
@@ -100,6 +102,9 @@ const start = async () => {
 ║                                                               ║
 ║  CHAT IA                                                      ║
 ║  POST   /conversations/:id/chat    Envoyer un message IA      ║
+║                                                               ║
+║  RECHERCHE SÉMANTIQUE                                         ║
+║  GET    /spaces/:id/search?q=...   Rechercher dans un espace  ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
     `);

@@ -2,12 +2,12 @@
  * MEMORA — Service de chat IA
  *
  * Gère toute la logique du chat intelligent par espace.
- * Phase 1 : Mode dégradé (contenu depuis PostgreSQL, pas de Qdrant).
+ * Recherche sémantique via Qdrant (avec fallback PostgreSQL si Qdrant indisponible).
  *
  * Pipeline :
  * 1. Sauvegarder le message utilisateur
  * 2. Récupérer l'historique de la conversation
- * 3. Récupérer les sources de l'espace (mode dégradé : PostgreSQL direct)
+ * 3. Rechercher les sources pertinentes via Qdrant (ou fallback PostgreSQL)
  * 4. Construire le system prompt avec le contexte
  * 5. Appeler Claude API
  * 6. Sauvegarder la réponse assistant
@@ -16,6 +16,7 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 const db = require('../db');
+const qdrant = require('./qdrantService');
 
 // ============================================
 // Client Anthropic (singleton)
@@ -66,18 +67,25 @@ const LIMITE_HISTORIQUE = 10;
 
 /**
  * Construit le system prompt pour Claude avec le contexte de l'espace
+ * Accepte les deux formats de sources :
+ * - Qdrant : { texte, nom, type, score }
+ * - PostgreSQL (fallback) : { extrait, nom, type }
  *
  * @param {string} nomEspace - Nom de l'espace
  * @param {Array} sources - Sources avec extraits de contenu
+ * @param {boolean} [depuisQdrant=false] - true si les sources viennent de Qdrant
  * @returns {string} - Le system prompt complet
  */
-function construireSystemPrompt(nomEspace, sources) {
+function construireSystemPrompt(nomEspace, sources, depuisQdrant = false) {
   let contexte = '';
 
   if (sources.length > 0) {
     contexte = '\n\nTu as accès au contenu des sources suivantes pour répondre aux questions :\n\n';
     for (const source of sources) {
-      contexte += `---\n[Type: ${source.type} | Nom: "${source.nom}"]\n${source.extrait}\n\n`;
+      // Qdrant retourne "texte", PostgreSQL retourne "extrait"
+      const contenu = depuisQdrant ? source.texte : source.extrait;
+      const pertinence = depuisQdrant && source.score ? ` | Pertinence: ${Math.round(source.score * 100)}%` : '';
+      contexte += `---\n[Type: ${source.type} | Nom: "${source.nom}"${pertinence}]\n${contenu}\n\n`;
     }
   } else {
     contexte = '\n\nAucune source n\'est disponible dans cet espace pour le moment.';
@@ -121,17 +129,37 @@ async function processerMessage(conversationId, spaceId, messageUtilisateur) {
     content: m.content
   }));
 
-  // 3. Mode dégradé : récupérer les 5 sources les plus récentes avec contenu
-  const sourcesResult = await db.query(SQL.SOURCES_RECENTES, [spaceId]);
-  const sources = sourcesResult.rows;
-  const idsSourcesUtilisées = sources.map(s => s.id);
+  // 3. Rechercher les sources pertinentes via Qdrant (avec fallback PostgreSQL)
+  let sources = [];
+  let idsSourcesUtilisées = [];
+  let depuisQdrant = false;
+
+  try {
+    const resultatsQdrant = await qdrant.rechercher(spaceId, messageUtilisateur, 5);
+    if (resultatsQdrant.length > 0) {
+      sources = resultatsQdrant;
+      idsSourcesUtilisées = [...new Set(resultatsQdrant.map(r => r.sourceId))];
+      depuisQdrant = true;
+    }
+  } catch (erreurQdrant) {
+    // Log l'erreur mais continue avec le fallback PostgreSQL
+    console.warn('[Chat] Qdrant non disponible, fallback PostgreSQL :', erreurQdrant.message);
+  }
+
+  // Fallback PostgreSQL si Qdrant ne retourne rien
+  if (sources.length === 0) {
+    const sourcesResult = await db.query(SQL.SOURCES_RECENTES, [spaceId]);
+    sources = sourcesResult.rows;
+    idsSourcesUtilisées = sources.map(s => s.id);
+    depuisQdrant = false;
+  }
 
   // 4. Récupérer le nom de l'espace pour le prompt
   const espaceResult = await db.query(SQL.NOM_ESPACE, [spaceId]);
   const nomEspace = espaceResult.rows[0]?.nom || 'Sans nom';
 
   // 5. Construire le system prompt et appeler Claude
-  const systemPrompt = construireSystemPrompt(nomEspace, sources);
+  const systemPrompt = construireSystemPrompt(nomEspace, sources, depuisQdrant);
 
   const client = getClientAnthropic();
   const reponse = await client.messages.create({
