@@ -5,16 +5,8 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const spacesRoutes = require('./routes/spaces');
 const sourcesRoutes = require('./routes/sources');
-const uploadsRoutes = require('./routes/uploads');
-
-// Routes legacy (désactivées — seront refactorées pour le modèle espaces/sources)
-// const meetingsRoutes = require('./routes/meetings');
-// const transcriptsRoutes = require('./routes/transcripts');
-// const summariesRoutes = require('./routes/summaries');
-// const transcriptionsRoutes = require('./routes/transcriptions');
-// const searchRoutes = require('./routes/search');
-// const exportRoutes = require('./routes/export');
-// const recallRoutes = require('./routes/recall');
+const conversationsRoutes = require('./routes/conversations');
+const chatRoutes = require('./routes/chat');
 
 // Configuration
 const PORT = process.env.PORT || 3001;
@@ -25,9 +17,9 @@ fastify.register(require('@fastify/postgres'), {
   connectionString: process.env.DATABASE_URL || 'postgresql://memora:memora_dev_password@localhost:5432/memora_db'
 });
 
-// CORS pour le frontend
+// CORS pour le frontend (configurable via variable d'environnement)
 fastify.register(require('@fastify/cors'), {
-  origin: 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true
 });
 
@@ -43,7 +35,7 @@ fastify.register(require('@fastify/jwt'), {
   secret: JWT_SECRET
 });
 
-// Middleware d'authentification
+// Middleware d'authentification centralisé — utilisé par toutes les routes protégées
 fastify.decorate('authenticate', async function (request, reply) {
   try {
     await request.jwtVerify();
@@ -56,7 +48,8 @@ fastify.decorate('authenticate', async function (request, reply) {
 fastify.register(authRoutes);
 fastify.register(spacesRoutes);
 fastify.register(sourcesRoutes);
-fastify.register(uploadsRoutes);
+fastify.register(conversationsRoutes);
+fastify.register(chatRoutes);
 fastify.register(require('./routes/summary-models'));
 
 // Route de test
@@ -99,9 +92,14 @@ const start = async () => {
 ║  PUT    /sources/:id           Modifier une source             ║
 ║  DELETE /sources/:id           Supprimer une source            ║
 ║                                                               ║
-║  FICHIERS                                                     ║
-║  POST   /uploads               Upload un fichier              ║
-║  GET    /uploads                Liste des fichiers             ║
+║  CONVERSATIONS                                                ║
+║  GET    /spaces/:id/conversations  Lister les conversations    ║
+║  POST   /spaces/:id/conversations  Créer une conversation      ║
+║  GET    /conversations/:id/messages  Messages d'une conv.      ║
+║  DELETE /conversations/:id         Supprimer une conversation  ║
+║                                                               ║
+║  CHAT IA                                                      ║
+║  POST   /conversations/:id/chat    Envoyer un message IA      ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
     `);

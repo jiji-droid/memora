@@ -11,33 +11,6 @@
  */
 
 const db = require('../db');
-const { verifyToken } = require('../utils/jwt');
-
-/**
- * Middleware d'authentification JWT
- */
-async function authenticate(request, reply) {
-  const authHeader = request.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return reply.status(401).send({
-      success: false,
-      error: 'Token manquant. Connectez-vous d\'abord.'
-    });
-  }
-
-  const token = authHeader.split(' ')[1];
-  const decoded = verifyToken(token);
-
-  if (!decoded) {
-    return reply.status(401).send({
-      success: false,
-      error: 'Token invalide ou expiré'
-    });
-  }
-
-  request.user = decoded;
-}
 
 /**
  * Vérifie que l'espace appartient à l'utilisateur
@@ -52,13 +25,14 @@ async function verifierEspace(spaceId, userId) {
 
 /**
  * Configure les routes des sources
+ * Utilise fastify.authenticate (défini dans index.js) pour l'authentification JWT
  */
 async function sourcesRoutes(fastify) {
 
   // ============================================
   // LISTER LES SOURCES D'UN ESPACE : GET /spaces/:spaceId/sources
   // ============================================
-  fastify.get('/spaces/:spaceId/sources', { preHandler: authenticate }, async (request, reply) => {
+  fastify.get('/spaces/:spaceId/sources', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const spaceId = request.params.spaceId;
 
@@ -118,7 +92,7 @@ async function sourcesRoutes(fastify) {
       });
 
     } catch (error) {
-      console.error('Erreur liste sources:', error);
+      request.log.error(error, 'Erreur liste sources');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'
@@ -130,7 +104,7 @@ async function sourcesRoutes(fastify) {
   // AJOUTER UNE SOURCE : POST /spaces/:spaceId/sources
   // Types supportés : text, meeting, voice_note, document, upload
   // ============================================
-  fastify.post('/spaces/:spaceId/sources', { preHandler: authenticate }, async (request, reply) => {
+  fastify.post('/spaces/:spaceId/sources', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const spaceId = request.params.spaceId;
     const { type, nom, content, metadata, fileKey, fileSize, fileMime, durationSeconds } = request.body;
@@ -215,7 +189,7 @@ async function sourcesRoutes(fastify) {
       });
 
     } catch (error) {
-      console.error('Erreur ajout source:', error);
+      request.log.error(error, 'Erreur ajout source');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'
@@ -226,7 +200,7 @@ async function sourcesRoutes(fastify) {
   // ============================================
   // DÉTAILS D'UNE SOURCE : GET /sources/:id
   // ============================================
-  fastify.get('/sources/:id', { preHandler: authenticate }, async (request, reply) => {
+  fastify.get('/sources/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const sourceId = request.params.id;
 
@@ -276,7 +250,7 @@ async function sourcesRoutes(fastify) {
       });
 
     } catch (error) {
-      console.error('Erreur détail source:', error);
+      request.log.error(error, 'Erreur détail source');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'
@@ -287,7 +261,7 @@ async function sourcesRoutes(fastify) {
   // ============================================
   // MODIFIER UNE SOURCE : PUT /sources/:id
   // ============================================
-  fastify.put('/sources/:id', { preHandler: authenticate }, async (request, reply) => {
+  fastify.put('/sources/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const sourceId = request.params.id;
     const { nom, content, metadata } = request.body;
@@ -342,7 +316,7 @@ async function sourcesRoutes(fastify) {
       });
 
     } catch (error) {
-      console.error('Erreur modification source:', error);
+      request.log.error(error, 'Erreur modification source');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'
@@ -353,7 +327,7 @@ async function sourcesRoutes(fastify) {
   // ============================================
   // SUPPRIMER UNE SOURCE : DELETE /sources/:id
   // ============================================
-  fastify.delete('/sources/:id', { preHandler: authenticate }, async (request, reply) => {
+  fastify.delete('/sources/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const sourceId = request.params.id;
 
@@ -388,7 +362,7 @@ async function sourcesRoutes(fastify) {
       });
 
     } catch (error) {
-      console.error('Erreur suppression source:', error);
+      request.log.error(error, 'Erreur suppression source');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'

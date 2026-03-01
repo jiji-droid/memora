@@ -11,43 +11,17 @@
  */
 
 const db = require('../db');
-const { verifyToken } = require('../utils/jwt');
-
-/**
- * Middleware d'authentification JWT
- */
-async function authenticate(request, reply) {
-  const authHeader = request.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return reply.status(401).send({
-      success: false,
-      error: 'Token manquant. Connectez-vous d\'abord.'
-    });
-  }
-
-  const token = authHeader.split(' ')[1];
-  const decoded = verifyToken(token);
-
-  if (!decoded) {
-    return reply.status(401).send({
-      success: false,
-      error: 'Token invalide ou expiré'
-    });
-  }
-
-  request.user = decoded;
-}
 
 /**
  * Configure les routes des espaces
+ * Utilise fastify.authenticate (défini dans index.js) pour l'authentification JWT
  */
 async function spacesRoutes(fastify) {
 
   // ============================================
   // CRÉER UN ESPACE : POST /spaces
   // ============================================
-  fastify.post('/spaces', { preHandler: authenticate }, async (request, reply) => {
+  fastify.post('/spaces', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { nom, description, tags, externalProjectId, externalProjectSource } = request.body;
     const userId = request.user.userId;
 
@@ -93,7 +67,7 @@ async function spacesRoutes(fastify) {
       });
 
     } catch (error) {
-      console.error('Erreur création espace:', error);
+      request.log.error(error, 'Erreur création espace');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'
@@ -104,7 +78,7 @@ async function spacesRoutes(fastify) {
   // ============================================
   // LISTER SES ESPACES : GET /spaces
   // ============================================
-  fastify.get('/spaces', { preHandler: authenticate }, async (request, reply) => {
+  fastify.get('/spaces', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
 
     const page = parseInt(request.query.page) || 1;
@@ -159,7 +133,7 @@ async function spacesRoutes(fastify) {
       });
 
     } catch (error) {
-      console.error('Erreur liste espaces:', error);
+      request.log.error(error, 'Erreur liste espaces');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'
@@ -170,7 +144,7 @@ async function spacesRoutes(fastify) {
   // ============================================
   // VOIR UN ESPACE : GET /spaces/:id
   // ============================================
-  fastify.get('/spaces/:id', { preHandler: authenticate }, async (request, reply) => {
+  fastify.get('/spaces/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const spaceId = request.params.id;
 
@@ -228,7 +202,7 @@ async function spacesRoutes(fastify) {
       });
 
     } catch (error) {
-      console.error('Erreur détail espace:', error);
+      request.log.error(error, 'Erreur détail espace');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'
@@ -239,7 +213,7 @@ async function spacesRoutes(fastify) {
   // ============================================
   // MODIFIER UN ESPACE : PUT /spaces/:id
   // ============================================
-  fastify.put('/spaces/:id', { preHandler: authenticate }, async (request, reply) => {
+  fastify.put('/spaces/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const spaceId = request.params.id;
     const { nom, description, tags, externalProjectId, externalProjectSource } = request.body;
@@ -299,7 +273,7 @@ async function spacesRoutes(fastify) {
       });
 
     } catch (error) {
-      console.error('Erreur modification espace:', error);
+      request.log.error(error, 'Erreur modification espace');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'
@@ -310,7 +284,7 @@ async function spacesRoutes(fastify) {
   // ============================================
   // SUPPRIMER UN ESPACE : DELETE /spaces/:id
   // ============================================
-  fastify.delete('/spaces/:id', { preHandler: authenticate }, async (request, reply) => {
+  fastify.delete('/spaces/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const spaceId = request.params.id;
 
@@ -334,7 +308,7 @@ async function spacesRoutes(fastify) {
       });
 
     } catch (error) {
-      console.error('Erreur suppression espace:', error);
+      request.log.error(error, 'Erreur suppression espace');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'
