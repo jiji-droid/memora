@@ -1,18 +1,24 @@
 /**
- * MEMORA - Client API
- * 
- * Ce fichier contient toutes les fonctions pour communiquer
- * avec le backend (auth-service).
+ * MEMORA — Client API
+ *
+ * Toutes les fonctions pour communiquer avec le backend Fastify.
+ * Organisé par domaine : auth, espaces, sources, conversations, chat, recherche.
  */
 
-const API_URL = 'http://localhost:3001';
+import type {
+  Space, SpaceInput, Source, SourceInput,
+  Conversation, Message, SearchResult,
+  SummaryModel, User, ApiResponse, Pagination,
+} from './types';
 
-// Stocke le token en mémoire (côté client uniquement)
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+// ============================================
+// TOKEN
+// ============================================
+
 let authToken: string | null = null;
 
-/**
- * Définit le token d'authentification
- */
 export function setToken(token: string | null) {
   authToken = token;
   if (typeof window !== 'undefined') {
@@ -24,9 +30,6 @@ export function setToken(token: string | null) {
   }
 }
 
-/**
- * Récupère le token d'authentification
- */
 export function getToken(): string | null {
   if (authToken) return authToken;
   if (typeof window !== 'undefined') {
@@ -35,39 +38,65 @@ export function getToken(): string | null {
   return authToken;
 }
 
-/**
- * Vérifie si l'utilisateur est connecté
- */
 export function isLoggedIn(): boolean {
   return !!getToken();
 }
 
-/**
- * Effectue une requête API
- */
-async function apiRequest(endpoint: string, options: RequestInit = {}) {
+// ============================================
+// REQUÊTE GÉNÉRIQUE
+// ============================================
+
+async function apiRequest<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
   const token = getToken();
-  
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...options.headers as Record<string, string>,
   };
-  
+
+  // Content-Type seulement quand y'a un body (évite Bad Request sur POST sans body)
+  if (options.body) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers,
   });
-  
+
   const data = await response.json();
-  
+
   if (!response.ok) {
     throw new Error(data.error || 'Une erreur est survenue');
   }
-  
+
+  return data;
+}
+
+// Requête multipart (pas de Content-Type — le browser le met avec le boundary)
+async function apiUpload<T = unknown>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Erreur lors de l\'upload');
+  }
+
   return data;
 }
 
@@ -76,28 +105,28 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
 // ============================================
 
 export async function register(email: string, password: string, firstName?: string, lastName?: string) {
-  const data = await apiRequest('/auth/register', {
+  const data = await apiRequest<{ token: string; user: User }>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ email, password, firstName, lastName }),
   });
-  
+
   if (data.data?.token) {
     setToken(data.data.token);
   }
-  
+
   return data;
 }
 
 export async function login(email: string, password: string) {
-  const data = await apiRequest('/auth/login', {
+  const data = await apiRequest<{ token: string; user: User }>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
-  
+
   if (data.data?.token) {
     setToken(data.data.token);
   }
-  
+
   return data;
 }
 
@@ -106,71 +135,177 @@ export function logout() {
 }
 
 export async function getProfile() {
-  return apiRequest('/auth/me');
+  return apiRequest<{ user: User }>('/auth/me');
 }
 
 // ============================================
-// RÉUNIONS
+// ESPACES
 // ============================================
 
-export async function getMeetings(page = 1, limit = 10) {
-  return apiRequest(`/meetings?page=${page}&limit=${limit}`);
+export async function getSpaces(page = 1, limit = 20) {
+  return apiRequest<{ spaces: Space[]; pagination: Pagination }>(
+    `/spaces?page=${page}&limit=${limit}`
+  );
 }
 
-export async function getMeeting(id: number) {
-  return apiRequest(`/meetings/${id}`);
+export async function getSpace(id: number) {
+  return apiRequest<{ space: Space; sources: Source[] }>(`/spaces/${id}`);
 }
 
-export async function createMeeting(title: string, platform?: string, participants?: string[]) {
-  return apiRequest('/meetings', {
+export async function createSpace(data: SpaceInput) {
+  return apiRequest<{ space: Space }>('/spaces', {
     method: 'POST',
-    body: JSON.stringify({ title, platform, participants }),
+    body: JSON.stringify(data),
   });
 }
 
-export async function deleteMeeting(id: number) {
-  return apiRequest(`/meetings/${id}`, {
-    method: 'DELETE',
-  });
-}
-
-export async function updateMeeting(id: number, data: { title?: string; platform?: string; status?: string }) {
-  return apiRequest(`/meetings/${id}`, {
+export async function updateSpace(id: number, data: Partial<SpaceInput>) {
+  return apiRequest<{ space: Space }>(`/spaces/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
-// ============================================
-// TRANSCRIPTIONS
-// ============================================
-
-export async function createTranscript(meetingId: number, content: string, language = 'fr') {
-  return apiRequest('/transcripts', {
-    method: 'POST',
-    body: JSON.stringify({ meetingId, content, language }),
+export async function deleteSpace(id: number) {
+  return apiRequest(`/spaces/${id}`, {
+    method: 'DELETE',
   });
 }
 
-export async function getTranscript(id: number) {
-  return apiRequest(`/transcripts/${id}`);
+// ============================================
+// SOURCES
+// ============================================
+
+export async function getSources(spaceId: number, type?: string) {
+  const params = type ? `?type=${type}` : '';
+  return apiRequest<{ sources: Source[] }>(`/spaces/${spaceId}/sources${params}`);
 }
 
-// ============================================
-// RÉSUMÉS
-// ============================================
+export async function getSource(id: number) {
+  return apiRequest<{ source: Source }>(`/sources/${id}`);
+}
 
-export async function generateSummary(meetingId: number, options?: { detailLevel?: string; tone?: string }) {
-  return apiRequest('/summaries/generate', {
+export async function createSource(spaceId: number, data: SourceInput) {
+  return apiRequest<{ source: Source }>(`/spaces/${spaceId}/sources`, {
     method: 'POST',
-    body: JSON.stringify({ meetingId, options }),
+    body: JSON.stringify(data),
   });
 }
 
-export async function getSummary(id: number) {
-  return apiRequest(`/summaries/${id}`);
+export async function updateSource(id: number, data: { nom?: string; content?: string }) {
+  return apiRequest<{ source: Source }>(`/sources/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
 }
 
-export async function getMeetingSummaries(meetingId: number) {
-  return apiRequest(`/meetings/${meetingId}/summaries`);
+export async function deleteSource(id: number) {
+  return apiRequest(`/sources/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getSourceStatus(id: number) {
+  return apiRequest<{ id: number; transcriptionStatus: string; updatedAt: string }>(
+    `/sources/${id}/status`
+  );
+}
+
+// ============================================
+// UPLOAD
+// ============================================
+
+export async function uploadFile(spaceId: number, file: File, nom?: string) {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (nom) formData.append('nom', nom);
+
+  return apiUpload<{ source: Source }>(`/spaces/${spaceId}/sources/upload`, formData);
+}
+
+// ============================================
+// CONVERSATIONS
+// ============================================
+
+export async function getConversations(spaceId: number, page = 1, limit = 20) {
+  return apiRequest<{ conversations: Conversation[]; pagination: Pagination }>(
+    `/spaces/${spaceId}/conversations?page=${page}&limit=${limit}`
+  );
+}
+
+export async function createConversation(spaceId: number) {
+  return apiRequest<{ conversation: Conversation }>(`/spaces/${spaceId}/conversations`, {
+    method: 'POST',
+  });
+}
+
+export async function getMessages(conversationId: number, page = 1, limit = 50) {
+  return apiRequest<{ messages: Message[]; pagination: Pagination }>(
+    `/conversations/${conversationId}/messages?page=${page}&limit=${limit}`
+  );
+}
+
+export async function deleteConversation(id: number) {
+  return apiRequest(`/conversations/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// ============================================
+// CHAT IA
+// ============================================
+
+export async function sendChatMessage(conversationId: number, message: string) {
+  return apiRequest<{ message: Message }>(`/conversations/${conversationId}/chat`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}
+
+// ============================================
+// RECHERCHE SÉMANTIQUE
+// ============================================
+
+export async function searchInSpace(spaceId: number, query: string, limit = 10) {
+  return apiRequest<{ results: SearchResult[]; total: number; query: string }>(
+    `/spaces/${spaceId}/search?q=${encodeURIComponent(query)}&limit=${limit}`
+  );
+}
+
+// ============================================
+// MODÈLES DE RÉSUMÉ
+// ============================================
+
+export async function getSummaryModels() {
+  return apiRequest<{ models: SummaryModel[] }>('/summary-models');
+}
+
+export async function getSummaryModel(id: number) {
+  return apiRequest<{ model: SummaryModel }>(`/summary-models/${id}`);
+}
+
+export async function createSummaryModel(data: Omit<SummaryModel, 'id' | 'createdAt' | 'isShared'>) {
+  return apiRequest<{ model: SummaryModel }>('/summary-models', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSummaryModel(id: number, data: Partial<SummaryModel>) {
+  return apiRequest<{ model: SummaryModel }>(`/summary-models/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSummaryModel(id: number) {
+  return apiRequest(`/summary-models/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function setDefaultSummaryModel(id: number) {
+  return apiRequest(`/summary-models/${id}/set-default`, {
+    method: 'POST',
+  });
 }

@@ -9,9 +9,9 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Memora - Vos réunions résumées par l'IA",
-  description: "Transcription et résumé automatique de vos réunions Zoom, Teams et Meet grâce à l'intelligence artificielle.",
-  keywords: ["transcription", "réunion", "IA", "résumé", "Zoom", "Teams", "Meet"],
+  title: "Memoras — Tes espaces de connaissances",
+  description: "Espaces de connaissances alimentés par la voix et l'IA. Capture tes meetings, notes vocales et documents, puis pose des questions à ton agent IA.",
+  keywords: ["memora", "espaces", "connaissances", "IA", "transcription", "meetings", "notes vocales"],
   icons: {
     icon: "/favicon.svg",
   },
@@ -23,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={poppins.variable}>
-      <body className={poppins.className}>{children}</body>
+    <html lang="fr" className={poppins.variable} style={{ backgroundColor: '#f0f2f8' }}>
+      <body className={poppins.className} style={{ backgroundColor: '#f0f2f8' }}>{children}</body>
     </html>
   );
 }

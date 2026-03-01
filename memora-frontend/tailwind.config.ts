@@ -9,33 +9,21 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Palette de couleurs Memora
+      // Palette Gestimatech — Bleu/Orange
       colors: {
-        // Couleur primaire - Turquoise
-        primary: {
-          50: '#ECFEFF',
-          100: '#CFFAFE',
-          200: '#A5F3FC',
-          300: '#67E8F9',
-          400: '#22D3EE',
-          500: '#06B6D4', // Couleur principale
-          600: '#0891B2',
-          700: '#0E7490',
-          800: '#155E75',
-          900: '#164E63',
-        },
-        // Couleur secondaire - Violet (IA)
-        secondary: {
-          50: '#F5F3FF',
-          100: '#EDE9FE',
-          200: '#DDD6FE',
-          300: '#C4B5FD',
-          400: '#A78BFA',
-          500: '#8B5CF6', // Couleur principale
-          600: '#7C3AED',
-          700: '#6D28D9',
-          800: '#5B21B6',
-          900: '#4C1D95',
+        memora: {
+          bleu: {
+            DEFAULT: '#09307e',
+            clair: '#1155a8',
+            pale: '#e8edf5',
+            fonce: '#061f52',
+          },
+          orange: {
+            DEFAULT: '#f58820',
+            clair: '#f5a623',
+            pale: '#fef3e2',
+            fonce: '#c56a0a',
+          },
         },
         // Succès - Vert
         success: {
@@ -44,7 +32,7 @@ const config: Config = {
           200: '#A7F3D0',
           300: '#6EE7B7',
           400: '#34D399',
-          500: '#10B981', // Couleur principale
+          500: '#10B981',
           600: '#059669',
           700: '#047857',
           800: '#065F46',
@@ -57,7 +45,7 @@ const config: Config = {
           200: '#FDE68A',
           300: '#FCD34D',
           400: '#FBBF24',
-          500: '#F59E0B', // Couleur principale
+          500: '#F59E0B',
           600: '#D97706',
           700: '#B45309',
           800: '#92400E',
@@ -70,7 +58,7 @@ const config: Config = {
           200: '#FECACA',
           300: '#FCA5A5',
           400: '#F87171',
-          500: '#EF4444', // Couleur principale
+          500: '#EF4444',
           600: '#DC2626',
           700: '#B91C1C',
           800: '#991B1B',
@@ -108,11 +96,11 @@ const config: Config = {
       },
       // Ombres personnalisées
       boxShadow: {
-        'soft': '0 2px 8px rgba(0, 0, 0, 0.08)',
-        'medium': '0 4px 16px rgba(0, 0, 0, 0.12)',
-        'strong': '0 8px 32px rgba(0, 0, 0, 0.16)',
-        'glow-primary': '0 0 20px rgba(6, 182, 212, 0.3)',
-        'glow-secondary': '0 0 20px rgba(139, 92, 246, 0.3)',
+        'soft': '0 2px 8px rgba(0, 0, 0, 0.06)',
+        'medium': '0 4px 16px rgba(0, 0, 0, 0.08)',
+        'strong': '0 8px 32px rgba(0, 0, 0, 0.12)',
+        'glow-bleu': '0 0 20px rgba(9, 48, 126, 0.25)',
+        'glow-orange': '0 0 20px rgba(245, 136, 32, 0.25)',
       },
       // Animations personnalisées
       animation: {

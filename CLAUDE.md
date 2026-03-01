@@ -17,10 +17,10 @@
 
 | Metrique | Valeur |
 |----------|--------|
-| **Avancement global** | 42% |
-| **Phase actuelle** | Phase 1 — "Mon outil" (étapes 1.1 + 1.2 + 1.3 backend complètes) |
+| **Avancement global** | 50% |
+| **Phase actuelle** | Phase 1 — "Mon outil" (étapes 1.1 + 1.2 + 1.3 backend + 1.4 frontend complètes) |
 | **Derniere session** | 2026-03-01 |
-| **Prochaine action** | Étape 1.4 — Refactorer frontend meetings→spaces (palette Gestimatech) |
+| **Prochaine action** | Étape 1.5 — Déploiement (Cloudflare Pages + VPS Hostinger → memoras.ai live) |
 | **Bloquant** | Aucun |
 
 ### Phases et avancement detaille
@@ -29,7 +29,7 @@
 |-------|-------------|------------|--------|
 | Phase 0 | Cadrage, stack technique, code initial | 100% | Terminé |
 | Phase 0.5 | PRD, architecture, roadmap | 100% | Terminé (2026-02-24) |
-| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 42% | En cours (étapes 1.1 + 1.2 + 1.3 ✅) |
+| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 50% | En cours (étapes 1.1 + 1.2 + 1.3 + 1.4 ✅) |
 | Phase 2 | "Mobile" — PWA, notes vocales, recherche | 0% | Pas commencé |
 | Phase 3 | "Intégrations" — Bot meeting, Wrike, création tâches | 0% | Pas commencé |
 | Phase 4 | "SaaS public" — Multi-user, Stripe, landing page | 0% | Pas commencé |
@@ -44,6 +44,7 @@
 | 2026-03-01 | 0.75h | Étape 1.1 suite : PLAN-PHASE1.md (architecte), conversations.js (4 endpoints), chatService.js (pipeline chat IA mode dégradé), chat.js, standardisation auth/logs sur spaces+sources, suppression 8 fichiers legacy | 15% → 25% |
 | 2026-03-01 | 0.25h | Étape 1.2 : embeddingService (OpenAI), chunkingService (500 chars, overlap), qdrantService (5 fonctions), indexationService (pipeline), route search, indexation async sources, fallback PG dans chat, 926 insertions | 25% → 35% |
 | 2026-03-01 | 0.25h | Étape 1.3 : r2Service (R2 upload/signée/suppression), extractionService (PDF/DOCX/TXT), transcriptionPipeline (Deepgram 7 étapes), route upload multipart, GET /sources/:id/status, cleanup R2 sur DELETE, 2601 insertions | 35% → 42% |
+| 2026-03-01 | 2h | Étape 1.4 : fix createConversation (Content-Type sans body), export PDF (lib/export.ts, zéro dépendance), ménage 6 composants legacy, édition modèles résumé (settings), brand fix Memoras | 42% → 50% |
 
 ---
 

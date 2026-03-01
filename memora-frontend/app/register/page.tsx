@@ -26,7 +26,6 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
-    // Validation
     if (password !== confirmPassword) {
       setError('Les mots de passe ne correspondent pas');
       return;
@@ -49,7 +48,6 @@ export default function RegisterPage() {
     }
   };
 
-  // Password strength indicator
   const getPasswordStrength = () => {
     if (!password) return { strength: 0, label: '', color: '' };
     let strength = 0;
@@ -61,8 +59,8 @@ export default function RegisterPage() {
     const configs = [
       { label: 'Faible', color: '#ef4444' },
       { label: 'Moyen', color: '#f59e0b' },
-      { label: 'Bon', color: '#A8B78A' },
-      { label: 'Excellent', color: '#B58AFF' },
+      { label: 'Bon', color: '#10b981' },
+      { label: 'Excellent', color: '#09307e' },
     ];
 
     return { strength, ...configs[Math.min(strength - 1, 3)] || { label: '', color: '' } };
@@ -71,168 +69,110 @@ export default function RegisterPage() {
   const passwordStrength = getPasswordStrength();
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1E2A26' }}>
-      
-      {/* Aurora background effects */}
+    <div className="min-h-screen relative overflow-hidden bg-[var(--color-bg-secondary)]">
+
+      {/* Effets aurora bleu/orange */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div 
+        <div
           className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(181,138,255,0.2) 0%, transparent 60%)',
+            background: 'radial-gradient(circle, rgba(9,48,126,0.12) 0%, transparent 60%)',
             filter: 'blur(80px)',
             animation: 'pulse 8s ease-in-out infinite',
           }}
         />
-        
-        <div 
+        <div
           className="absolute -bottom-40 -left-40 w-[600px] h-[600px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(168,183,138,0.15) 0%, transparent 60%)',
+            background: 'radial-gradient(circle, rgba(245,136,32,0.08) 0%, transparent 60%)',
             filter: 'blur(80px)',
             animation: 'pulse 10s ease-in-out infinite reverse',
           }}
         />
-
-        <div 
+        <div
           className="absolute top-1/3 -left-20 w-[400px] h-[400px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(181,138,255,0.1) 0%, transparent 60%)',
+            background: 'radial-gradient(circle, rgba(9,48,126,0.06) 0%, transparent 60%)',
             filter: 'blur(100px)',
           }}
         />
-
-        <div 
-          className="absolute top-1/2 right-1/4 w-[500px] h-[500px] rounded-full"
-          style={{
-            background: 'radial-gradient(circle, rgba(215,224,140,0.08) 0%, transparent 60%)',
-            filter: 'blur(100px)',
-          }}
-        />
-
-        <svg className="absolute top-0 left-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#A8B78A" strokeWidth="1"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
       </div>
 
-      {/* Main content */}
+      {/* Contenu principal */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 py-8">
         <div className="w-full max-w-md">
-          
-          {/* Logo and title */}
+
+          {/* Logo et titre */}
           <div className="text-center mb-6">
             <Link href="/" className="inline-block">
-              <img 
-                src="/memora-logo.png" 
-                alt="Memora" 
-                className="h-24 w-auto mx-auto transition-transform duration-300 hover:scale-105"
-              />
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <svg width="40" height="40" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="reg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#09307e" />
+                      <stop offset="100%" stopColor="#f58820" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="40" cy="40" r="36" stroke="url(#reg-grad)" strokeWidth="3" fill="none" opacity="0.2" />
+                  <circle cx="40" cy="40" r="16" fill="#09307e" opacity="0.15" />
+                  <circle cx="40" cy="40" r="6" fill="#09307e" />
+                </svg>
+                <span className="text-2xl font-bold text-[#09307e]">Memoras</span>
+              </div>
             </Link>
-            <h1 className="text-2xl font-bold mt-4" style={{ color: '#f5f5f5' }}>
+            <h1 className="text-2xl font-bold text-[var(--color-accent-primary)]">
               Créer un compte
             </h1>
-            <p style={{ color: '#A8B78A' }} className="mt-2">
-              Rejoignez{' '}
-              <span 
-                className="font-semibold"
-                style={{ 
-                  background: 'linear-gradient(135deg, #B58AFF 0%, #D7E08C 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Memora
+            <p className="mt-2 text-[var(--color-text-secondary)]">
+              Rejoins{' '}
+              <span className="font-semibold text-[var(--color-accent-primary)]">
+                Memoras
               </span>
               {' '}gratuitement
             </p>
           </div>
 
-          {/* Register card */}
-          <div 
-            className="relative rounded-2xl p-8"
-            style={{
-              background: 'linear-gradient(145deg, rgba(46, 62, 56, 0.95) 0%, rgba(46, 62, 56, 0.98) 100%)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(168, 183, 138, 0.2)',
-              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.03)',
-            }}
-          >
-            {/* Top glow line */}
-            <div 
+          {/* Carte inscription */}
+          <div className="card-glass p-8 shadow-medium animate-fade-in relative">
+            {/* Ligne accent en haut */}
+            <div
               className="absolute top-0 left-[10%] right-[10%] h-[2px] rounded-full"
               style={{
-                background: 'linear-gradient(90deg, transparent, #B58AFF, #A8B78A, transparent)',
+                background: 'linear-gradient(90deg, transparent, #09307e, #f58820, transparent)',
               }}
             />
 
-            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name fields */}
+              {/* Prénom / Nom */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: '#A8B78A' }}>
-                    Prénom
-                  </label>
+                  <label className="label">Prénom</label>
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="Jean"
-                    className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-300"
-                    style={{ 
-                      backgroundColor: 'rgba(30, 42, 38, 0.8)',
-                      border: '2px solid rgba(168, 183, 138, 0.2)',
-                      color: '#f5f5f5'
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#B58AFF';
-                      e.currentTarget.style.boxShadow = '0 0 20px rgba(181, 138, 255, 0.2)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.2)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
+                    className="input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: '#A8B78A' }}>
-                    Nom
-                  </label>
+                  <label className="label">Nom</label>
                   <input
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Dupont"
-                    className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-300"
-                    style={{ 
-                      backgroundColor: 'rgba(30, 42, 38, 0.8)',
-                      border: '2px solid rgba(168, 183, 138, 0.2)',
-                      color: '#f5f5f5'
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#B58AFF';
-                      e.currentTarget.style.boxShadow = '0 0 20px rgba(181, 138, 255, 0.2)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.2)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
+                    className="input"
                   />
                 </div>
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: '#A8B78A' }}>
-                  Email *
-                </label>
+                <label className="label">Email *</label>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <svg className="w-5 h-5" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
@@ -242,32 +182,17 @@ export default function RegisterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="vous@exemple.com"
-                    className="w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all duration-300"
-                    style={{ 
-                      backgroundColor: 'rgba(30, 42, 38, 0.8)',
-                      border: '2px solid rgba(168, 183, 138, 0.2)',
-                      color: '#f5f5f5'
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#B58AFF';
-                      e.currentTarget.style.boxShadow = '0 0 20px rgba(181, 138, 255, 0.2)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.2)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
+                    className="input pl-12"
                   />
                 </div>
               </div>
 
-              {/* Password */}
+              {/* Mot de passe */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: '#A8B78A' }}>
-                  Mot de passe *
-                </label>
+                <label className="label">Mot de passe *</label>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <svg className="w-5 h-5" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   </div>
@@ -278,26 +203,12 @@ export default function RegisterPage() {
                     required
                     minLength={8}
                     placeholder="••••••••"
-                    className="w-full pl-12 pr-12 py-3 rounded-xl outline-none transition-all duration-300"
-                    style={{ 
-                      backgroundColor: 'rgba(30, 42, 38, 0.8)',
-                      border: '2px solid rgba(168, 183, 138, 0.2)',
-                      color: '#f5f5f5'
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#B58AFF';
-                      e.currentTarget.style.boxShadow = '0 0 20px rgba(181, 138, 255, 0.2)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.2)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
+                    className="input pl-12 pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
-                    style={{ color: '#A8B78A' }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-accent-primary)] transition-colors"
                   >
                     {showPassword ? (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -311,8 +222,8 @@ export default function RegisterPage() {
                     )}
                   </button>
                 </div>
-                
-                {/* Password strength indicator */}
+
+                {/* Indicateur de force */}
                 {password && (
                   <div className="mt-2">
                     <div className="flex gap-1 mb-1">
@@ -321,9 +232,9 @@ export default function RegisterPage() {
                           key={level}
                           className="h-1 flex-1 rounded-full transition-all duration-300"
                           style={{
-                            backgroundColor: level <= passwordStrength.strength 
-                              ? passwordStrength.color 
-                              : 'rgba(168, 183, 138, 0.2)'
+                            backgroundColor: level <= passwordStrength.strength
+                              ? passwordStrength.color
+                              : 'var(--color-border)'
                           }}
                         />
                       ))}
@@ -335,14 +246,12 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {/* Confirm Password */}
+              {/* Confirmer mot de passe */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: '#A8B78A' }}>
-                  Confirmer le mot de passe *
-                </label>
+                <label className="label">Confirmer le mot de passe *</label>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <svg className="w-5 h-5" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                   </div>
@@ -352,49 +261,25 @@ export default function RegisterPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    className="w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all duration-300"
-                    style={{ 
-                      backgroundColor: 'rgba(30, 42, 38, 0.8)',
-                      border: `2px solid ${confirmPassword && confirmPassword !== password ? 'rgba(239, 68, 68, 0.5)' : 'rgba(168, 183, 138, 0.2)'}`,
-                      color: '#f5f5f5'
-                    }}
-                    onFocus={(e) => {
-                      if (!(confirmPassword && confirmPassword !== password)) {
-                        e.currentTarget.style.borderColor = '#B58AFF';
-                        e.currentTarget.style.boxShadow = '0 0 20px rgba(181, 138, 255, 0.2)';
-                      }
-                    }}
-                    onBlur={(e) => {
-                      if (!(confirmPassword && confirmPassword !== password)) {
-                        e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.2)';
-                      }
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
+                    className={`input pl-12 ${confirmPassword && confirmPassword !== password ? 'border-error-500' : ''}`}
                   />
                   {confirmPassword && password === confirmPassword && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <svg className="w-5 h-5" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-success-600">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
                   )}
                 </div>
                 {confirmPassword && confirmPassword !== password && (
-                  <p className="text-xs mt-1" style={{ color: '#f87171' }}>
+                  <p className="text-xs mt-1 text-error-500">
                     Les mots de passe ne correspondent pas
                   </p>
                 )}
               </div>
 
               {error && (
-                <div 
-                  className="px-4 py-3 rounded-xl text-sm flex items-center gap-2"
-                  style={{
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    color: '#f87171',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                  }}
-                >
+                <div className="px-4 py-3 rounded-xl text-sm flex items-center gap-2 bg-error-50 text-error-600 border border-error-200">
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -405,13 +290,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02]"
-                style={{ 
-                  background: 'linear-gradient(135deg, #B58AFF 0%, #9D6FE8 100%)',
-                  color: '#1E2A26',
-                  opacity: loading ? 0.7 : 1,
-                  boxShadow: '0 4px 20px rgba(181, 138, 255, 0.4)'
-                }}
+                className="btn btn-primary w-full py-3.5"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -428,26 +307,24 @@ export default function RegisterPage() {
             </form>
           </div>
 
-          {/* Login link */}
-          <p className="text-center mt-6" style={{ color: '#A8B78A' }}>
+          {/* Lien connexion */}
+          <p className="text-center mt-6 text-[var(--color-text-secondary)]">
             Déjà un compte ?{' '}
-            <Link 
-              href="/login" 
-              className="font-semibold transition-colors hover:underline"
-              style={{ color: '#B58AFF' }}
+            <Link
+              href="/login"
+              className="font-semibold text-[var(--color-accent-primary)] hover:underline transition-colors"
             >
               Se connecter
             </Link>
           </p>
 
-          {/* Footer */}
-          <p className="text-center text-sm mt-4" style={{ color: 'rgba(168, 183, 138, 0.6)' }}>
-            En créant un compte, vous acceptez nos{' '}
-            <a href="#" className="hover:underline" style={{ color: '#A8B78A' }}>
-              conditions d'utilisation
+          <p className="text-center text-sm mt-4 text-[var(--color-text-secondary)] opacity-60">
+            En créant un compte, tu acceptes nos{' '}
+            <a href="#" className="hover:underline text-[var(--color-accent-primary)]">
+              conditions d&apos;utilisation
             </a>
             {' '}et notre{' '}
-            <a href="#" className="hover:underline" style={{ color: '#A8B78A' }}>
+            <a href="#" className="hover:underline text-[var(--color-accent-primary)]">
               politique de confidentialité
             </a>
           </p>

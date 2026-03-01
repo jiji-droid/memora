@@ -13,11 +13,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    if (isLoggedIn()) {
-      router.push('/dashboard');
-    }
-  }, [router]);
+  // Pas d'auto-redirect ici — évite les boucles infinies
+  // si le token est expiré ou le backend pas démarré
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,112 +37,92 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#1E2A26' }}>
-      
-      {/* Aurora background effects */}
+    <div className="min-h-screen relative overflow-hidden bg-[var(--color-bg-secondary)]">
+
+      {/* Effets aurora bleu/orange */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div 
-          className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full animate-pulse"
+        <div
+          className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(181,138,255,0.2) 0%, transparent 60%)',
+            background: 'radial-gradient(circle, rgba(9,48,126,0.12) 0%, transparent 60%)',
             filter: 'blur(80px)',
             animation: 'pulse 8s ease-in-out infinite',
           }}
         />
-        
-        <div 
+        <div
           className="absolute -bottom-40 -left-40 w-[600px] h-[600px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(168,183,138,0.15) 0%, transparent 60%)',
+            background: 'radial-gradient(circle, rgba(245,136,32,0.08) 0%, transparent 60%)',
             filter: 'blur(80px)',
             animation: 'pulse 10s ease-in-out infinite reverse',
           }}
         />
-
-        <div 
+        <div
           className="absolute top-1/3 -left-20 w-[400px] h-[400px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(181,138,255,0.1) 0%, transparent 60%)',
+            background: 'radial-gradient(circle, rgba(9,48,126,0.06) 0%, transparent 60%)',
             filter: 'blur(100px)',
           }}
         />
-
-        <div 
-          className="absolute top-1/2 right-1/4 w-[500px] h-[500px] rounded-full"
-          style={{
-            background: 'radial-gradient(circle, rgba(215,224,140,0.08) 0%, transparent 60%)',
-            filter: 'blur(100px)',
-          }}
-        />
-
-        <svg className="absolute top-0 left-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#A8B78A" strokeWidth="1"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
       </div>
 
-      {/* Main content */}
+      {/* Contenu principal */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          
-          {/* Logo and title */}
+
+          {/* Logo et titre */}
           <div className="text-center mb-8">
             <Link href="/" className="inline-block">
-              <img 
-                src="/memora-logo.png" 
-                alt="Memora" 
-                className="h-32 w-auto mx-auto transition-transform duration-300 hover:scale-105"
-              />
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <svg width="48" height="48" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#09307e" />
+                      <stop offset="100%" stopColor="#f58820" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="40" cy="40" r="36" stroke="url(#logo-grad)" strokeWidth="3" fill="none" opacity="0.2" />
+                  <circle cx="40" cy="40" r="16" fill="#09307e" opacity="0.15" />
+                  <circle cx="40" cy="40" r="6" fill="#09307e" />
+                  <circle cx="22" cy="22" r="4" fill="#09307e" opacity="0.6" />
+                  <circle cx="58" cy="22" r="4" fill="#1155a8" opacity="0.6" />
+                  <circle cx="22" cy="58" r="4" fill="#f58820" opacity="0.6" />
+                  <circle cx="58" cy="58" r="4" fill="#f5a623" opacity="0.6" />
+                  <line x1="40" y1="40" x2="22" y2="22" stroke="#09307e" strokeWidth="1.5" opacity="0.3" />
+                  <line x1="40" y1="40" x2="58" y2="22" stroke="#09307e" strokeWidth="1.5" opacity="0.3" />
+                  <line x1="40" y1="40" x2="22" y2="58" stroke="#f58820" strokeWidth="1.5" opacity="0.3" />
+                  <line x1="40" y1="40" x2="58" y2="58" stroke="#f58820" strokeWidth="1.5" opacity="0.3" />
+                </svg>
+                <span className="text-2xl font-bold text-[#09307e]">Memoras</span>
+              </div>
             </Link>
-            <h1 className="text-2xl font-bold mt-4" style={{ color: '#f5f5f5' }}>
+            <h1 className="text-2xl font-bold text-[var(--color-accent-primary)]">
               Bon retour !
             </h1>
-            <p style={{ color: '#A8B78A' }} className="mt-2">
-              Connectez-vous à votre{' '}
-              <span 
-                className="font-semibold"
-                style={{ 
-                  background: 'linear-gradient(135deg, #B58AFF 0%, #D7E08C 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                second cerveau
+            <p className="mt-2 text-[var(--color-text-secondary)]">
+              Connecte-toi à ton{' '}
+              <span className="font-semibold text-[var(--color-accent-primary)]">
+                espace de connaissances
               </span>
             </p>
           </div>
 
-          {/* Login card */}
-          <div 
-            className="relative rounded-2xl p-8"
-            style={{
-              background: 'linear-gradient(145deg, rgba(46, 62, 56, 0.95) 0%, rgba(46, 62, 56, 0.98) 100%)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(168, 183, 138, 0.2)',
-              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.03)',
-            }}
-          >
-            {/* Top glow line */}
-            <div 
+          {/* Carte login */}
+          <div className="card-glass p-8 shadow-medium">
+            {/* Ligne accent en haut */}
+            <div
               className="absolute top-0 left-[10%] right-[10%] h-[2px] rounded-full"
               style={{
-                background: 'linear-gradient(90deg, transparent, #B58AFF, #A8B78A, transparent)',
+                background: 'linear-gradient(90deg, transparent, #09307e, #f58820, transparent)',
               }}
             />
 
-            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: '#A8B78A' }}>
-                  Email
-                </label>
+                <label className="label">Email</label>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <svg className="w-5 h-5" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
@@ -155,31 +132,16 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="vous@exemple.com"
-                    className="w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all duration-300"
-                    style={{ 
-                      backgroundColor: 'rgba(30, 42, 38, 0.8)',
-                      border: '2px solid rgba(168, 183, 138, 0.2)',
-                      color: '#f5f5f5'
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#B58AFF';
-                      e.currentTarget.style.boxShadow = '0 0 20px rgba(181, 138, 255, 0.2)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.2)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
+                    className="input pl-12"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: '#A8B78A' }}>
-                  Mot de passe
-                </label>
+                <label className="label">Mot de passe</label>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <svg className="w-5 h-5" style={{ color: '#A8B78A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   </div>
@@ -189,26 +151,12 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    className="w-full pl-12 pr-12 py-3 rounded-xl outline-none transition-all duration-300"
-                    style={{ 
-                      backgroundColor: 'rgba(30, 42, 38, 0.8)',
-                      border: '2px solid rgba(168, 183, 138, 0.2)',
-                      color: '#f5f5f5'
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#B58AFF';
-                      e.currentTarget.style.boxShadow = '0 0 20px rgba(181, 138, 255, 0.2)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.2)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
+                    className="input pl-12 pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
-                    style={{ color: '#A8B78A' }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-accent-primary)] transition-colors"
                   >
                     {showPassword ? (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,26 +172,17 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Forgot password link */}
               <div className="text-right">
                 <button
                   type="button"
-                  className="text-sm transition-colors hover:underline"
-                  style={{ color: '#B58AFF' }}
+                  className="text-sm text-[var(--color-accent-primary)] hover:underline transition-colors"
                 >
                   Mot de passe oublié ?
                 </button>
               </div>
 
               {error && (
-                <div 
-                  className="px-4 py-3 rounded-xl text-sm flex items-center gap-2"
-                  style={{
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    color: '#f87171',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                  }}
-                >
+                <div className="px-4 py-3 rounded-xl text-sm flex items-center gap-2 bg-error-50 text-error-600 border border-error-200">
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -254,13 +193,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02]"
-                style={{ 
-                  background: 'linear-gradient(135deg, #B58AFF 0%, #9D6FE8 100%)',
-                  color: '#1E2A26',
-                  opacity: loading ? 0.7 : 1,
-                  boxShadow: '0 4px 20px rgba(181, 138, 255, 0.4)'
-                }}
+                className="btn btn-primary w-full py-3.5"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -276,47 +209,23 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Separator */}
+            {/* Séparateur */}
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div 
-                  className="w-full h-[1px]"
-                  style={{
-                    background: 'linear-gradient(90deg, transparent, rgba(168, 183, 138, 0.4), transparent)',
-                  }}
-                />
+                <div className="w-full h-[1px] bg-[var(--color-border)]" />
               </div>
               <div className="relative flex justify-center">
-                <span 
-                  className="px-4 text-sm"
-                  style={{ 
-                    backgroundColor: 'rgba(46, 62, 56, 0.98)',
-                    color: '#A8B78A',
-                  }}
-                >
+                <span className="px-4 text-sm bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)]">
                   ou
                 </span>
               </div>
             </div>
 
-            {/* Demo account */}
+            {/* Compte démo */}
             <button
               type="button"
               onClick={fillDemo}
-              className="w-full py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 hover:scale-[1.02]"
-              style={{ 
-                backgroundColor: 'rgba(168, 183, 138, 0.1)',
-                border: '2px solid rgba(168, 183, 138, 0.3)',
-                color: '#A8B78A'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#A8B78A';
-                e.currentTarget.style.backgroundColor = 'rgba(168, 183, 138, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(168, 183, 138, 0.3)';
-                e.currentTarget.style.backgroundColor = 'rgba(168, 183, 138, 0.1)';
-              }}
+              className="btn btn-outline w-full"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -325,23 +234,21 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Register link */}
-          <p className="text-center mt-6" style={{ color: '#A8B78A' }}>
+          {/* Lien inscription */}
+          <p className="text-center mt-6 text-[var(--color-text-secondary)]">
             Pas encore de compte ?{' '}
-            <Link 
-              href="/register" 
-              className="font-semibold transition-colors hover:underline"
-              style={{ color: '#B58AFF' }}
+            <Link
+              href="/register"
+              className="font-semibold text-[var(--color-accent-primary)] hover:underline transition-colors"
             >
-              S'inscrire gratuitement
+              S&apos;inscrire gratuitement
             </Link>
           </p>
 
-          {/* Footer */}
-          <p className="text-center text-sm mt-4" style={{ color: 'rgba(168, 183, 138, 0.6)' }}>
-            En continuant, vous acceptez nos{' '}
-            <a href="#" className="hover:underline" style={{ color: '#A8B78A' }}>
-              conditions d'utilisation
+          <p className="text-center text-sm mt-4 text-[var(--color-text-secondary)] opacity-60">
+            En continuant, tu acceptes nos{' '}
+            <a href="#" className="hover:underline text-[var(--color-accent-primary)]">
+              conditions d&apos;utilisation
             </a>
           </p>
         </div>
