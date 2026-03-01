@@ -1,48 +1,39 @@
 /**
- * MEMORA — Service d'embeddings (OpenAI)
+ * MEMORA — Service d'embeddings (Gemini)
  *
  * Génère des vecteurs d'embedding pour la recherche sémantique.
- * Utilise le modèle text-embedding-3-small (1536 dimensions).
+ * Utilise le modèle text-embedding-004 de Google (768 dimensions, gratuit).
  *
  * Fonctions exportées :
  * - genererEmbedding(texte)       → vecteur unique
  * - genererEmbeddingsBatch(textes) → tableau de vecteurs
  */
 
-const OpenAI = require('openai');
-
 // ============================================
 // Configuration
 // ============================================
-const MODELE_EMBEDDING = process.env.EMBEDDING_MODEL || 'text-embedding-3-small';
-const DIMENSIONS_EMBEDDING = parseInt(process.env.EMBEDDING_DIMENSIONS) || 1536;
-
-// ============================================
-// Client OpenAI (singleton)
-// ============================================
-let clientOpenAI = null;
+const MODELE_EMBEDDING = 'text-embedding-004';
+const DIMENSIONS_EMBEDDING = 768;
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 /**
- * Retourne le client OpenAI (le crée au premier appel)
- * @returns {OpenAI} Instance du client OpenAI
- * @throws {Error} Si OPENAI_API_KEY n'est pas configurée
+ * Retourne la clé API Gemini
+ * @returns {string} Clé API
+ * @throws {Error} Si GEMINI_API_KEY n'est pas configurée
  */
-function getClientOpenAI() {
-  if (!clientOpenAI) {
-    const cleApi = process.env.OPENAI_API_KEY;
-    if (!cleApi || cleApi === 'sk-xxx-placeholder') {
-      throw new Error('OPENAI_API_KEY non configurée dans .env — requis pour les embeddings');
-    }
-    clientOpenAI = new OpenAI({ apiKey: cleApi });
+function getCleApi() {
+  const cle = process.env.GEMINI_API_KEY;
+  if (!cle) {
+    throw new Error('GEMINI_API_KEY non configurée dans .env — requis pour les embeddings');
   }
-  return clientOpenAI;
+  return cle;
 }
 
 /**
  * Génère un vecteur d'embedding pour un texte donné
  *
  * @param {string} texte - Le texte à transformer en vecteur
- * @returns {Promise<number[]>} Vecteur de DIMENSIONS_EMBEDDING dimensions
+ * @returns {Promise<number[]>} Vecteur de 768 dimensions
  * @throws {Error} Si le texte est vide ou si l'API échoue
  */
 async function genererEmbedding(texte) {
@@ -50,30 +41,45 @@ async function genererEmbedding(texte) {
     throw new Error('Le texte pour l\'embedding ne peut pas être vide');
   }
 
-  const client = getClientOpenAI();
+  const cleApi = getCleApi();
 
   try {
-    const reponse = await client.embeddings.create({
-      model: MODELE_EMBEDDING,
-      input: texte.trim(),
-      dimensions: DIMENSIONS_EMBEDDING
-    });
+    const reponse = await fetch(
+      `${GEMINI_API_URL}/${MODELE_EMBEDDING}:embedContent?key=${cleApi}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: `models/${MODELE_EMBEDDING}`,
+          content: { parts: [{ text: texte.trim() }] }
+        })
+      }
+    );
 
-    return reponse.data[0].embedding;
-  } catch (erreur) {
-    // Reformuler les erreurs OpenAI en messages clairs
-    if (erreur.status === 401) {
-      throw new Error('Clé API OpenAI invalide — vérifier OPENAI_API_KEY');
+    if (!reponse.ok) {
+      const erreur = await reponse.text();
+      if (reponse.status === 401 || reponse.status === 403) {
+        throw new Error('Clé API Gemini invalide — vérifier GEMINI_API_KEY');
+      }
+      if (reponse.status === 429) {
+        throw new Error('Limite de requêtes Gemini atteinte — réessayer plus tard');
+      }
+      throw new Error(`Erreur API Gemini (${reponse.status}) : ${erreur}`);
     }
-    if (erreur.status === 429) {
-      throw new Error('Limite de requêtes OpenAI atteinte — réessayer plus tard');
+
+    const data = await reponse.json();
+    return data.embedding.values;
+  } catch (erreur) {
+    if (erreur.message.includes('Clé API') || erreur.message.includes('Limite')) {
+      throw erreur;
     }
     throw new Error(`Erreur génération embedding : ${erreur.message}`);
   }
 }
 
 /**
- * Génère des vecteurs d'embedding pour plusieurs textes en un seul appel
+ * Génère des vecteurs d'embedding pour plusieurs textes
+ * Gemini n'a pas de batch natif — on appelle batchEmbedContents
  *
  * @param {string[]} textes - Tableau de textes à transformer en vecteurs
  * @returns {Promise<number[][]>} Tableau de vecteurs (même ordre que les textes)
@@ -91,23 +97,40 @@ async function genererEmbeddingsBatch(textes) {
     throw new Error('Tous les textes fournis sont vides');
   }
 
-  const client = getClientOpenAI();
+  const cleApi = getCleApi();
 
   try {
-    const reponse = await client.embeddings.create({
-      model: MODELE_EMBEDDING,
-      input: textesNettoyes,
-      dimensions: DIMENSIONS_EMBEDDING
-    });
+    // Utiliser batchEmbedContents pour envoyer tous les textes en un seul appel
+    const reponse = await fetch(
+      `${GEMINI_API_URL}/${MODELE_EMBEDDING}:batchEmbedContents?key=${cleApi}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: textesNettoyes.map(texte => ({
+            model: `models/${MODELE_EMBEDDING}`,
+            content: { parts: [{ text: texte }] }
+          }))
+        })
+      }
+    );
 
-    // L'API retourne les embeddings dans l'ordre des inputs
-    return reponse.data.map(d => d.embedding);
-  } catch (erreur) {
-    if (erreur.status === 401) {
-      throw new Error('Clé API OpenAI invalide — vérifier OPENAI_API_KEY');
+    if (!reponse.ok) {
+      const erreur = await reponse.text();
+      if (reponse.status === 401 || reponse.status === 403) {
+        throw new Error('Clé API Gemini invalide — vérifier GEMINI_API_KEY');
+      }
+      if (reponse.status === 429) {
+        throw new Error('Limite de requêtes Gemini atteinte — réessayer plus tard');
+      }
+      throw new Error(`Erreur API Gemini batch (${reponse.status}) : ${erreur}`);
     }
-    if (erreur.status === 429) {
-      throw new Error('Limite de requêtes OpenAI atteinte — réessayer plus tard');
+
+    const data = await reponse.json();
+    return data.embeddings.map(e => e.values);
+  } catch (erreur) {
+    if (erreur.message.includes('Clé API') || erreur.message.includes('Limite')) {
+      throw erreur;
     }
     throw new Error(`Erreur génération embeddings batch (${textesNettoyes.length} textes) : ${erreur.message}`);
   }

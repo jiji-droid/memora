@@ -17,11 +17,11 @@
 
 | Metrique | Valeur |
 |----------|--------|
-| **Avancement global** | 55% |
-| **Phase actuelle** | Phase 1 — "Mon outil" (étapes 1.1-1.4 complètes + 1.5 fichiers prêts) |
+| **Avancement global** | 65% |
+| **Phase actuelle** | Phase 1 — "Mon outil" (étapes 1.1-1.5 complètes, memoras.ai LIVE) |
 | **Derniere session** | 2026-03-01 |
-| **Prochaine action** | Étape 1.5 — Exécuter le déploiement VPS (setup-vps.sh + deploy.sh + DNS Cloudflare) |
-| **Bloquant** | JF doit : configurer DNS Cloudflare + SSH au VPS + remplir .env.production |
+| **Prochaine action** | Étape 1.6 — Compléter clés manquantes (OpenAI, R2, Telegram bot) + tests end-to-end complets |
+| **Bloquant** | Aucun — site live, clés API manquantes = features en mode dégradé |
 
 ### Phases et avancement detaille
 
@@ -29,7 +29,7 @@
 |-------|-------------|------------|--------|
 | Phase 0 | Cadrage, stack technique, code initial | 100% | Terminé |
 | Phase 0.5 | PRD, architecture, roadmap | 100% | Terminé (2026-02-24) |
-| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 55% | En cours (1.1-1.4 ✅ + 1.5 fichiers prêts, déploiement VPS reste) |
+| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 65% | En cours (1.1-1.5 ✅, memoras.ai LIVE, clés API manquantes) |
 | Phase 2 | "Mobile" — PWA, notes vocales, recherche | 0% | Pas commencé |
 | Phase 3 | "Intégrations" — Bot meeting, Wrike, création tâches | 0% | Pas commencé |
 | Phase 4 | "SaaS public" — Multi-user, Stripe, landing page | 0% | Pas commencé |
@@ -46,6 +46,7 @@
 | 2026-03-01 | 0.25h | Étape 1.3 : r2Service (R2 upload/signée/suppression), extractionService (PDF/DOCX/TXT), transcriptionPipeline (Deepgram 7 étapes), route upload multipart, GET /sources/:id/status, cleanup R2 sur DELETE, 2601 insertions | 35% → 42% |
 | 2026-03-01 | 2h | Étape 1.4 : fix createConversation (Content-Type sans body), export PDF (lib/export.ts, zéro dépendance), ménage 6 composants legacy, édition modèles résumé (settings), brand fix Memoras | 42% → 50% |
 | 2026-03-01 | — | Étape 1.5 (fichiers) : telegramService.js (alertes Standard), hook erreurs globales + /health, ecosystem.config.js (PM2 api+front), next.config.ts (standalone), nginx configs (api + front), deploy.sh + setup-vps.sh, .env.production template. Plan B : frontend VPS au lieu de Cloudflare Pages (routes dynamiques incompatibles export statique) | 50% → 55% |
+| 2026-03-01 | 2h | Étape 1.5 (déploiement) : DNS Cloudflare (3 A records), VPS setup (PostgreSQL 16, PM2, Node 20), Traefik file provider (memora.yml) au lieu de Nginx (port 80 pris par Docker), git clone + npm ci + build standalone, .env.production avec vrais secrets, PM2 start → memoras.ai LIVE (API 200, health OK, front 307) | 55% → 65% |
 
 ---
 
