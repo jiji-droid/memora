@@ -1,0 +1,42 @@
+# Déploiement automatique Memora sur VPS Hostinger
+# Déclenché à chaque push sur main
+# Secrets requis : VPS_SSH_KEY, VPS_HOST, VPS_USER
+
+name: Deploy Memora
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déployer sur le VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/memora
+            git pull origin main
+
+            # Backend
+            cd /opt/memora/memora-backend/services/auth-service
+            npm ci --omit=dev
+
+            # Frontend
+            cd /opt/memora/memora-frontend
+            npm ci
+            NEXT_PUBLIC_API_URL=https://api.memoras.ai npm run build
+            cp -r public .next/standalone/public 2>/dev/null || true
+            cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+
+            # Redémarrer
+            cd /opt/memora/memora-backend
+            pm2 restart ecosystem.config.js
+
+            # Vérifier
+            sleep 3
+            curl -sf http://localhost:3001/health || echo "ERREUR: API health check failed"
