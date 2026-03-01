@@ -182,7 +182,8 @@ export default function RegisterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="vous@exemple.com"
-                    className="input pl-12"
+                    className="input"
+                    style={{ paddingLeft: '3rem' }}
                   />
                 </div>
               </div>
@@ -203,7 +204,8 @@ export default function RegisterPage() {
                     required
                     minLength={8}
                     placeholder="••••••••"
-                    className="input pl-12 pr-12"
+                    className="input"
+                    style={{ paddingLeft: '3rem', paddingRight: '3rem' }}
                   />
                   <button
                     type="button"
@@ -261,7 +263,8 @@ export default function RegisterPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    className={`input pl-12 ${confirmPassword && confirmPassword !== password ? 'border-error-500' : ''}`}
+                    className={`input ${confirmPassword && confirmPassword !== password ? 'border-error-500' : ''}`}
+                    style={{ paddingLeft: '3rem' }}
                   />
                   {confirmPassword && password === confirmPassword && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-success-600">
