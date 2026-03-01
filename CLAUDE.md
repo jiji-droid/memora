@@ -17,11 +17,11 @@
 
 | Metrique | Valeur |
 |----------|--------|
-| **Avancement global** | 50% |
-| **Phase actuelle** | Phase 1 — "Mon outil" (étapes 1.1 + 1.2 + 1.3 backend + 1.4 frontend complètes) |
+| **Avancement global** | 55% |
+| **Phase actuelle** | Phase 1 — "Mon outil" (étapes 1.1-1.4 complètes + 1.5 fichiers prêts) |
 | **Derniere session** | 2026-03-01 |
-| **Prochaine action** | Étape 1.5 — Déploiement (Cloudflare Pages + VPS Hostinger → memoras.ai live) |
-| **Bloquant** | Aucun |
+| **Prochaine action** | Étape 1.5 — Exécuter le déploiement VPS (setup-vps.sh + deploy.sh + DNS Cloudflare) |
+| **Bloquant** | JF doit : configurer DNS Cloudflare + SSH au VPS + remplir .env.production |
 
 ### Phases et avancement detaille
 
@@ -29,7 +29,7 @@
 |-------|-------------|------------|--------|
 | Phase 0 | Cadrage, stack technique, code initial | 100% | Terminé |
 | Phase 0.5 | PRD, architecture, roadmap | 100% | Terminé (2026-02-24) |
-| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 50% | En cours (étapes 1.1 + 1.2 + 1.3 + 1.4 ✅) |
+| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 55% | En cours (1.1-1.4 ✅ + 1.5 fichiers prêts, déploiement VPS reste) |
 | Phase 2 | "Mobile" — PWA, notes vocales, recherche | 0% | Pas commencé |
 | Phase 3 | "Intégrations" — Bot meeting, Wrike, création tâches | 0% | Pas commencé |
 | Phase 4 | "SaaS public" — Multi-user, Stripe, landing page | 0% | Pas commencé |
@@ -45,6 +45,7 @@
 | 2026-03-01 | 0.25h | Étape 1.2 : embeddingService (OpenAI), chunkingService (500 chars, overlap), qdrantService (5 fonctions), indexationService (pipeline), route search, indexation async sources, fallback PG dans chat, 926 insertions | 25% → 35% |
 | 2026-03-01 | 0.25h | Étape 1.3 : r2Service (R2 upload/signée/suppression), extractionService (PDF/DOCX/TXT), transcriptionPipeline (Deepgram 7 étapes), route upload multipart, GET /sources/:id/status, cleanup R2 sur DELETE, 2601 insertions | 35% → 42% |
 | 2026-03-01 | 2h | Étape 1.4 : fix createConversation (Content-Type sans body), export PDF (lib/export.ts, zéro dépendance), ménage 6 composants legacy, édition modèles résumé (settings), brand fix Memoras | 42% → 50% |
+| 2026-03-01 | — | Étape 1.5 (fichiers) : telegramService.js (alertes Standard), hook erreurs globales + /health, ecosystem.config.js (PM2 api+front), next.config.ts (standalone), nginx configs (api + front), deploy.sh + setup-vps.sh, .env.production template. Plan B : frontend VPS au lieu de Cloudflare Pages (routes dynamiques incompatibles export statique) | 50% → 55% |
 
 ---
 
@@ -131,21 +132,29 @@ URL : `http://localhost:3001/api/...` (même serveur).
 ├── PRD.md                 # Vision produit
 ├── architecture.md        # Architecture technique
 ├── ROADMAP.md             # Phases et tâches détaillées
+├── PLAN-PHASE1.md         # Plan détaillé Phase 1
+├── deploy.sh              # Script de déploiement (mises à jour)
+├── setup-vps.sh           # Script d'installation initiale VPS
 ├── .claude/
 │   └── settings.json
 │
 ├── memora-backend/
-│   ├── docker-compose.yml    # PostgreSQL (dev local)
+│   ├── docker-compose.yml    # PostgreSQL + Redis + RabbitMQ (dev local)
+│   ├── ecosystem.config.js   # Config PM2 (api + frontend)
 │   ├── package.json
+│   ├── nginx/                # Configs Nginx pour le VPS
+│   │   ├── api.memoras.ai.conf    # Reverse proxy API (port 3001)
+│   │   └── memoras.ai.conf        # Reverse proxy frontend (port 3000)
 │   └── services/
 │       └── auth-service/     # API Fastify
 │           ├── src/
-│           │   ├── index.js          # Serveur principal
-│           │   ├── db.js             # Connexion DB + schéma
-│           │   ├── routes/           # Endpoints API
-│           │   ├── services/         # Logique métier (Deepgram, AI, export)
+│           │   ├── index.js          # Serveur principal + alertes Telegram
+│           │   ├── db.js             # Connexion DB + schéma (8 tables)
+│           │   ├── routes/           # 8 modules (auth, spaces, sources, etc.)
+│           │   ├── services/         # Pipeline IA, Telegram, Qdrant, R2, etc.
 │           │   └── utils/            # JWT, password, helpers
-│           ├── .env
+│           ├── .env                  # Variables dev local
+│           ├── .env.production       # Variables production (PAS dans git)
 │           └── package.json
 │
 └── memora-frontend/
@@ -154,12 +163,15 @@ URL : `http://localhost:3001/api/...` (même serveur).
     │   ├── login/            # Connexion
     │   ├── register/         # Inscription
     │   ├── dashboard/        # Liste des espaces
-    │   ├── meetings/[id]/    # → sera refactoré en spaces/[id]
+    │   ├── spaces/[id]/      # Détail espace + source
     │   ├── search/           # Recherche
-    │   └── settings/         # Paramètres
+    │   └── settings/         # Paramètres + modèles résumé
     ├── components/           # Composants réutilisables
     ├── lib/
-    │   └── api.ts            # Client API TypeScript
+    │   ├── api.ts            # Client API TypeScript (35+ fonctions)
+    │   ├── types.ts          # Types partagés
+    │   └── export.ts         # Export PDF (zéro dépendance)
+    ├── next.config.ts        # output: standalone (déploiement VPS)
     ├── package.json
     └── tailwind.config.ts
 ```
@@ -192,12 +204,87 @@ npm run dev
 
 | Quoi | URL |
 |------|-----|
-| **Production** | https://memoras.ai (pas encore déployé) |
+| **Production frontend** | https://memoras.ai |
+| **Production API** | https://api.memoras.ai |
 | **Frontend local** | http://localhost:3000 |
 | **API locale** | http://localhost:3001 |
 | **VPS Hostinger** | Même serveur que n8n |
-| **Cloudflare** | Dashboard Cloudflare (Pages + R2) |
+| **Cloudflare** | Dashboard Cloudflare (DNS + R2) |
 | **Qdrant** | http://localhost:6333 (sur VPS) |
+
+---
+
+## Déploiement production
+
+### Architecture déployée
+
+```
+                  Cloudflare DNS
+                       │
+          ┌────────────┼────────────┐
+          ▼                         ▼
+    memoras.ai              api.memoras.ai
+          │                         │
+          ▼                         ▼
+    ┌───────────┐             ┌───────────┐
+    │   Nginx   │             │   Nginx   │
+    │  :443 SSL │             │  :443 SSL │
+    └─────┬─────┘             └─────┬─────┘
+          │                         │
+          ▼                         ▼
+    ┌───────────┐             ┌───────────┐
+    │  Next.js  │             │  Fastify  │
+    │  :3000    │             │  :3001    │
+    │ (PM2)     │             │ (PM2)     │
+    └───────────┘             └─────┬─────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    ▼               ▼               ▼
+              ┌──────────┐   ┌──────────┐   ┌──────────┐
+              │PostgreSQL│   │  Qdrant  │   │   R2     │
+              │  :5432   │   │  :6333   │   │(Cloudflare)|
+              └──────────┘   └──────────┘   └──────────┘
+```
+
+### Décision : Frontend sur VPS (Plan B)
+
+Next.js 16 avec routes dynamiques (`[id]`) est **incompatible** avec `output: 'export'` (export statique requis par Cloudflare Pages). Déployer le frontend sur le VPS avec PM2 est plus simple et fiable.
+
+### Procédure de déploiement
+
+**Première installation :**
+```bash
+ssh user@VPS_IP
+bash -s < setup-vps.sh   # Installe PostgreSQL, PM2, Nginx, SSL
+nano /opt/memora/memora-backend/services/auth-service/.env.production  # Remplir secrets
+bash deploy.sh            # Build + démarrage PM2
+```
+
+**Mises à jour :**
+```bash
+ssh user@VPS_IP "cd /opt/memora && bash deploy.sh"
+```
+
+### DNS Cloudflare (JF doit configurer)
+
+| Type | Nom | Contenu | Proxy |
+|------|-----|---------|-------|
+| A | memoras.ai | IP_DU_VPS | Non (DNS only) |
+| A | www.memoras.ai | IP_DU_VPS | Non (DNS only) |
+| A | api.memoras.ai | IP_DU_VPS | Non (DNS only) |
+
+> Proxy Cloudflare désactivé (DNS only) car SSL est géré par Let's Encrypt sur le VPS.
+
+### Fichiers de déploiement
+
+| Fichier | Rôle |
+|---------|------|
+| `setup-vps.sh` | Installation initiale (PostgreSQL, PM2, Nginx, SSL) |
+| `deploy.sh` | Mises à jour (git pull, build, PM2 restart) |
+| `memora-backend/ecosystem.config.js` | Config PM2 (api port 3001 + front port 3000) |
+| `memora-backend/nginx/api.memoras.ai.conf` | Reverse proxy API |
+| `memora-backend/nginx/memoras.ai.conf` | Reverse proxy frontend |
+| `.env.production` | Secrets production (PAS dans git) |
 
 ---
 

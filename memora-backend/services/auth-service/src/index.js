@@ -1,5 +1,12 @@
+const path = require('path');
 const fastify = require('fastify')({ logger: true });
-require('dotenv').config();
+
+// Charger .env.production en production, .env en développement
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+require('dotenv').config({ path: path.join(__dirname, '..', envFile) });
+
+// Alertes Telegram (Standard Gestimatech)
+const { envoyerAlerte } = require('./services/telegramService');
 
 // Importer les routes
 const authRoutes = require('./routes/auth');
@@ -56,9 +63,30 @@ fastify.register(chatRoutes);
 fastify.register(searchRoutes);
 fastify.register(require('./routes/summary-models'));
 
-// Route de test
+// Hook global — alertes Telegram sur erreurs 500
+fastify.addHook('onError', async (request, reply, error) => {
+  if (reply.statusCode >= 500) {
+    const route = `${request.method} ${request.url}`;
+    envoyerAlerte('critique', `Erreur serveur sur ${route} : ${error.message}`);
+  }
+});
+
+// Route de santé (utilisée pour vérifier que l'API est live)
 fastify.get('/', async (request, reply) => {
-  return { status: 'ok', service: 'Memora API v2' };
+  return { status: 'ok', service: 'Memora API v2', env: process.env.NODE_ENV || 'development' };
+});
+
+// Route de santé détaillée (pour monitoring)
+fastify.get('/health', async (request, reply) => {
+  try {
+    const client = await fastify.pg.connect();
+    await client.query('SELECT 1');
+    client.release();
+    return { status: 'ok', db: 'connected', timestamp: new Date().toISOString() };
+  } catch (erreur) {
+    reply.status(503);
+    return { status: 'error', db: 'disconnected', error: erreur.message };
+  }
 });
 
 // Initialiser la DB et démarrer le serveur
@@ -114,10 +142,26 @@ const start = async () => {
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
     `);
+    // Alerte de démarrage en production
+    if (process.env.NODE_ENV === 'production') {
+      envoyerAlerte('a_verifier', `Serveur démarré sur le port ${PORT}`);
+    }
   } catch (err) {
     fastify.log.error(err);
+    envoyerAlerte('critique', `Impossible de démarrer le serveur : ${err.message}`);
     process.exit(1);
   }
 };
+
+// Gestion des erreurs non capturées
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Exception non capturée:', err);
+  envoyerAlerte('critique', `Exception non capturée : ${err.message}`);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Promesse rejetée non gérée:', reason);
+  envoyerAlerte('critique', `Promesse rejetée : ${reason}`);
+});
 
 start();
