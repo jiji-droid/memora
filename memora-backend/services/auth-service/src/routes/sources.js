@@ -6,13 +6,15 @@
  * GET    /spaces/:spaceId/sources          → Lister les sources d'un espace
  * POST   /spaces/:spaceId/sources          → Ajouter une source
  * GET    /sources/:id                      → Détails d'une source
+ * GET    /sources/:id/status               → Statut de transcription (polling)
  * PUT    /sources/:id                      → Modifier une source
- * DELETE /sources/:id                      → Supprimer une source
+ * DELETE /sources/:id                      → Supprimer une source (+ fichier R2)
  */
 
 const db = require('../db');
 const indexation = require('../services/indexationService');
 const qdrant = require('../services/qdrantService');
+const r2 = require('../services/r2Service');
 
 /**
  * Vérifie que l'espace appartient à l'utilisateur
@@ -275,6 +277,51 @@ async function sourcesRoutes(fastify) {
   });
 
   // ============================================
+  // STATUT DE TRANSCRIPTION : GET /sources/:id/status
+  // Endpoint léger pour le polling depuis le frontend
+  // ============================================
+  fastify.get('/sources/:id/status', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = request.user.userId;
+    const sourceId = request.params.id;
+
+    try {
+      // Vérifier ownership via JOIN (Pattern E)
+      const result = await db.query(
+        `SELECT src.id, src.transcription_status, src.summary IS NOT NULL AS has_summary
+         FROM sources src
+         JOIN spaces s ON s.id = src.space_id
+         WHERE src.id = $1 AND s.user_id = $2`,
+        [sourceId, userId]
+      );
+
+      if (result.rows.length === 0) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Source non trouvée'
+        });
+      }
+
+      const src = result.rows[0];
+
+      return reply.send({
+        success: true,
+        data: {
+          sourceId: src.id,
+          transcriptionStatus: src.transcription_status,
+          hasSummary: src.has_summary
+        }
+      });
+
+    } catch (error) {
+      request.log.error(error, 'Erreur statut source');
+      return reply.status(500).send({
+        success: false,
+        error: 'Erreur serveur'
+      });
+    }
+  });
+
+  // ============================================
   // MODIFIER UNE SOURCE : PUT /sources/:id
   // ============================================
   fastify.put('/sources/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
@@ -371,7 +418,7 @@ async function sourcesRoutes(fastify) {
          WHERE sources.space_id = spaces.id
            AND sources.id = $1
            AND spaces.user_id = $2
-         RETURNING sources.id, sources.nom, sources.space_id`,
+         RETURNING sources.id, sources.nom, sources.space_id, sources.file_key`,
         [sourceId, userId]
       );
 
@@ -390,6 +437,16 @@ async function sourcesRoutes(fastify) {
       } catch (erreurQdrant) {
         console.error(`[Sources DELETE] Erreur suppression Qdrant source ${sourceSuprimee.id} :`, erreurQdrant.message);
         // Ne pas bloquer — la source est déjà supprimée en DB
+      }
+
+      // Supprimer le fichier R2 si la source en avait un
+      if (sourceSuprimee.file_key && sourceSuprimee.file_key !== 'temp') {
+        try {
+          await r2.supprimer(sourceSuprimee.file_key);
+        } catch (erreurR2) {
+          console.error(`[Sources DELETE] Erreur suppression R2 source ${sourceSuprimee.id} :`, erreurR2.message);
+          // Ne pas bloquer — la source est déjà supprimée en DB
+        }
       }
 
       // Met à jour le updated_at de l'espace parent

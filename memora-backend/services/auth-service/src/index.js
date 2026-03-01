@@ -5,6 +5,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const spacesRoutes = require('./routes/spaces');
 const sourcesRoutes = require('./routes/sources');
+const uploadRoutes = require('./routes/upload');
 const conversationsRoutes = require('./routes/conversations');
 const chatRoutes = require('./routes/chat');
 const searchRoutes = require('./routes/search');
@@ -49,6 +50,7 @@ fastify.decorate('authenticate', async function (request, reply) {
 fastify.register(authRoutes);
 fastify.register(spacesRoutes);
 fastify.register(sourcesRoutes);
+fastify.register(uploadRoutes);
 fastify.register(conversationsRoutes);
 fastify.register(chatRoutes);
 fastify.register(searchRoutes);
@@ -91,8 +93,12 @@ const start = async () => {
 ║  GET    /spaces/:id/sources    Lister les sources              ║
 ║  POST   /spaces/:id/sources    Ajouter une source              ║
 ║  GET    /sources/:id           Détails d'une source            ║
+║  GET    /sources/:id/status    Statut transcription (polling)  ║
 ║  PUT    /sources/:id           Modifier une source             ║
 ║  DELETE /sources/:id           Supprimer une source            ║
+║                                                               ║
+║  UPLOAD                                                       ║
+║  POST   /spaces/:id/sources/upload  Upload fichier (multipart)║
 ║                                                               ║
 ║  CONVERSATIONS                                                ║
 ║  GET    /spaces/:id/conversations  Lister les conversations    ║
