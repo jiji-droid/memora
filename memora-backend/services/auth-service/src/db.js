@@ -46,6 +46,11 @@ async function query(text, params) {
 
 /**
  * Crée toutes les tables de la base de données
+ *
+ * Architecture Memora v2 :
+ * - Espaces (conteneurs de connaissances)
+ * - Sources (tout ce qui alimente un espace : texte, audio, meeting, document)
+ * - Conversations + Messages (chat IA par espace)
  */
 async function initDatabase() {
   try {
@@ -86,45 +91,78 @@ async function initDatabase() {
     console.log('✅ Table "users" prête');
 
     // ============================================
-    // TABLE: meetings (réunions)
+    // TABLE: spaces (espaces de connaissances — le coeur de Memora)
     // ============================================
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS meetings (
+      CREATE TABLE IF NOT EXISTS spaces (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL,
-        title VARCHAR(255) NOT NULL,
-        platform VARCHAR(50),
-        start_time TIMESTAMP,
-        end_time TIMESTAMP,
-        duration INTEGER,
-        participants JSONB DEFAULT '[]',
-        status VARCHAR(50) DEFAULT 'pending',
-        recording_url TEXT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        nom VARCHAR(255) NOT NULL,
+        description TEXT,
+        tags JSONB DEFAULT '[]',
+        settings JSONB DEFAULT '{}',
+        external_project_id TEXT,
+        external_project_source VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('✅ Table "meetings" prête');
+    console.log('✅ Table "spaces" prête');
 
     // ============================================
-    // TABLE: transcripts (transcriptions)
+    // TABLE: sources (tout ce qui alimente un espace)
+    // Types : meeting, voice_note, document, text, upload
     // ============================================
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS transcripts (
+      CREATE TABLE IF NOT EXISTS sources (
         id SERIAL PRIMARY KEY,
-        meeting_id INTEGER REFERENCES meetings(id) ON DELETE CASCADE,
+        space_id INTEGER NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL,
+        nom VARCHAR(255) NOT NULL,
+        metadata JSONB DEFAULT '{}',
         content TEXT,
-        language VARCHAR(10) DEFAULT 'fr',
-        segments JSONB DEFAULT '[]',
+        file_key TEXT,
+        file_size INTEGER,
+        file_mime VARCHAR(100),
+        transcription_status VARCHAR(20) DEFAULT 'none',
+        transcription_provider VARCHAR(50),
+        summary TEXT,
+        summary_model VARCHAR(50),
+        duration_seconds INTEGER,
         speakers JSONB DEFAULT '[]',
-        confidence FLOAT,
-        word_count INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('✅ Table "transcripts" prête');
+    console.log('✅ Table "sources" prête');
+
+    // ============================================
+    // TABLE: conversations (discussions IA par espace)
+    // ============================================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS conversations (
+        id SERIAL PRIMARY KEY,
+        space_id INTEGER NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Table "conversations" prête');
+
+    // ============================================
+    // TABLE: messages (messages dans une conversation IA)
+    // ============================================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        role VARCHAR(20) NOT NULL,
+        content TEXT NOT NULL,
+        sources_used JSONB DEFAULT '[]',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Table "messages" prête');
 
     // ============================================
     // TABLE: summary_models (modèles de résumé personnalisables)
@@ -148,71 +186,7 @@ async function initDatabase() {
     console.log('✅ Table "summary_models" prête');
 
     // ============================================
-    // TABLE: summaries (résumés générés)
-    // ============================================
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS summaries (
-        id SERIAL PRIMARY KEY,
-        meeting_id INTEGER REFERENCES meetings(id) ON DELETE CASCADE,
-        model_id INTEGER REFERENCES summary_models(id) ON DELETE SET NULL,
-        content TEXT,
-        sections JSONB DEFAULT '{}',
-        key_moments JSONB DEFAULT '{}',
-        ai_provider VARCHAR(50),
-        tokens_used INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log('✅ Table "summaries" prête');
-
-    // ============================================
-    // TABLE: consent_records (preuves de consentement - Loi 25)
-    // ============================================
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS consent_records (
-        id SERIAL PRIMARY KEY,
-        meeting_id INTEGER REFERENCES meetings(id) ON DELETE CASCADE,
-        mode VARCHAR(50) NOT NULL,
-        method VARCHAR(100),
-        participants JSONB DEFAULT '[]',
-        notified_at TIMESTAMP,
-        proof_type VARCHAR(100),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log('✅ Table "consent_records" prête');
-
-    // ============================================
-    // TABLE: projects (dossiers pour organiser les réunions)
-    // ============================================
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS projects (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL,
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        color VARCHAR(7) DEFAULT '#3B82F6',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log('✅ Table "projects" prête');
-
-    // ============================================
-    // TABLE: meeting_projects (lien réunion <-> projet)
-    // ============================================
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS meeting_projects (
-        meeting_id INTEGER REFERENCES meetings(id) ON DELETE CASCADE,
-        project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-        PRIMARY KEY (meeting_id, project_id)
-      );
-    `);
-    console.log('✅ Table "meeting_projects" prête');
-
-    // ============================================
-    // TABLE: audit_logs (journaux d'audit - Loi 25)
+    // TABLE: audit_logs (journaux d'audit — Loi 25)
     // ============================================
     await pool.query(`
       CREATE TABLE IF NOT EXISTS audit_logs (
@@ -229,7 +203,8 @@ async function initDatabase() {
     console.log('✅ Table "audit_logs" prête');
 
     console.log('');
-    console.log('🎉 Base de données initialisée avec succès !');
+    console.log('🎉 Base de données Memora v2 initialisée !');
+    console.log('   Tables : organizations, users, spaces, sources, conversations, messages, summary_models, audit_logs');
     console.log('');
 
   } catch (error) {

@@ -3,14 +3,18 @@ require('dotenv').config();
 
 // Importer les routes
 const authRoutes = require('./routes/auth');
-const meetingsRoutes = require('./routes/meetings');
-const transcriptsRoutes = require('./routes/transcripts');
-const summariesRoutes = require('./routes/summaries');
+const spacesRoutes = require('./routes/spaces');
+const sourcesRoutes = require('./routes/sources');
 const uploadsRoutes = require('./routes/uploads');
-const transcriptionsRoutes = require('./routes/transcriptions');
-const searchRoutes = require('./routes/search');
-const exportRoutes = require('./routes/export');
-const recallRoutes = require('./routes/recall');
+
+// Routes legacy (désactivées — seront refactorées pour le modèle espaces/sources)
+// const meetingsRoutes = require('./routes/meetings');
+// const transcriptsRoutes = require('./routes/transcripts');
+// const summariesRoutes = require('./routes/summaries');
+// const transcriptionsRoutes = require('./routes/transcriptions');
+// const searchRoutes = require('./routes/search');
+// const exportRoutes = require('./routes/export');
+// const recallRoutes = require('./routes/recall');
 
 // Configuration
 const PORT = process.env.PORT || 3001;
@@ -50,60 +54,54 @@ fastify.decorate('authenticate', async function (request, reply) {
 
 // Enregistrer les routes
 fastify.register(authRoutes);
-fastify.register(meetingsRoutes);
-fastify.register(transcriptsRoutes);
-fastify.register(summariesRoutes);
+fastify.register(spacesRoutes);
+fastify.register(sourcesRoutes);
 fastify.register(uploadsRoutes);
-fastify.register(transcriptionsRoutes);
-fastify.register(searchRoutes);
-fastify.register(exportRoutes);
 fastify.register(require('./routes/summary-models'));
-fastify.register(recallRoutes);
 
 // Route de test
 fastify.get('/', async (request, reply) => {
-  return { status: 'ok', service: 'Memora Auth Service' };
+  return { status: 'ok', service: 'Memora API v2' };
 });
 
-// Démarrer le serveur
+// Initialiser la DB et démarrer le serveur
+const db = require('./db');
+
 const start = async () => {
   try {
+    // Crée les tables si elles n'existent pas
+    await db.initDatabase();
+
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
     console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
-║                    MEMORA AUTH SERVICE                        ║
+║                      MEMORA API v2                           ║
 ╠═══════════════════════════════════════════════════════════════╣
-║  🚀 Serveur démarré sur http://localhost:${PORT}                 ║
+║  Serveur : http://localhost:${PORT}                              ║
 ╠═══════════════════════════════════════════════════════════════╣
-║  ENDPOINTS:                                                   ║
 ║                                                               ║
-║  🔐 AUTHENTIFICATION                                          ║
-║  POST   /auth/register    - Créer un compte                   ║
-║  POST   /auth/login       - Se connecter                      ║
-║  GET    /auth/profile     - Voir son profil                   ║
+║  AUTHENTIFICATION                                             ║
+║  POST   /auth/register         Créer un compte                ║
+║  POST   /auth/login            Se connecter                   ║
+║  GET    /auth/profile          Voir son profil                ║
 ║                                                               ║
-║  📅 RÉUNIONS                                                  ║
-║  POST   /meetings         - Créer une réunion                 ║
-║  GET    /meetings         - Liste des réunions                ║
-║  GET    /meetings/:id     - Détails d'une réunion             ║
-║  PUT    /meetings/:id     - Modifier une réunion              ║
-║  DELETE /meetings/:id     - Supprimer une réunion             ║
+║  ESPACES                                                      ║
+║  POST   /spaces                Créer un espace                ║
+║  GET    /spaces                Lister ses espaces              ║
+║  GET    /spaces/:id            Détails d'un espace             ║
+║  PUT    /spaces/:id            Modifier un espace              ║
+║  DELETE /spaces/:id            Supprimer un espace             ║
 ║                                                               ║
-║  📝 TRANSCRIPTIONS                                            ║
-║  POST   /transcripts      - Importer une transcription        ║
-║  GET    /transcripts/:id  - Voir une transcription            ║
+║  SOURCES                                                      ║
+║  GET    /spaces/:id/sources    Lister les sources              ║
+║  POST   /spaces/:id/sources    Ajouter une source              ║
+║  GET    /sources/:id           Détails d'une source            ║
+║  PUT    /sources/:id           Modifier une source             ║
+║  DELETE /sources/:id           Supprimer une source            ║
 ║                                                               ║
-║  🤖 RÉSUMÉS (IA)                                              ║
-║  POST   /summaries/generate - Générer un résumé               ║
-║  GET    /summaries/:id    - Voir un résumé                    ║
-║  GET    /meetings/:id/summaries - Résumés d'une réunion       ║
-║                                                               ║
-║  📁 FICHIERS                                                  ║
-║  POST   /uploads          - Upload un fichier                 ║
-║  GET    /uploads          - Liste des fichiers                ║
-║  GET    /uploads/:id      - Détails d'un fichier              ║
-║  PUT    /uploads/:id/link - Lier à une réunion                ║
-║  DELETE /uploads/:id      - Supprimer un fichier              ║
+║  FICHIERS                                                     ║
+║  POST   /uploads               Upload un fichier              ║
+║  GET    /uploads                Liste des fichiers             ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
     `);
