@@ -45,16 +45,15 @@ async function genererIcones() {
   console.log('Généré : icons/apple-touch-icon.png');
 
   // 4. Icône maskable 512x512 (avec padding 20% pour zone safe)
-  // On génère d'abord l'icône à 80% de la taille, puis on l'incruste sur un fond coloré
-  const tailleInterne = Math.round(512 * 0.8); // 410px (80% de 512)
-  const padding = Math.round((512 - tailleInterne) / 2); // 51px de chaque côté
+  // Le SVG a déjà un fond bleu plein bord — on réduit le logo à 80% et on l'incruste
+  const tailleInterne = Math.round(512 * 0.8); // 410px
+  const padding = Math.round((512 - tailleInterne) / 2); // 51px
 
   const iconeInterne = await sharp(svgBuffer)
     .resize(tailleInterne, tailleInterne)
     .png()
     .toBuffer();
 
-  // Fond bleu Gestimatech pour l'icône maskable
   await sharp({
     create: {
       width: 512,
