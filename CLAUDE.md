@@ -17,10 +17,10 @@
 
 | Metrique | Valeur |
 |----------|--------|
-| **Avancement global** | 70% |
-| **Phase actuelle** | Phase 1 — "Mon outil" (étapes 1.1-1.5 complètes, memoras.ai LIVE, toutes clés API configurées) |
-| **Derniere session** | 2026-03-01 |
-| **Prochaine action** | Tests end-to-end complets (inscription, espace, sources, chat, PDF) + Phase 2 planification |
+| **Avancement global** | 90% |
+| **Phase actuelle** | Phase 1 — "Mon outil" (1.1-1.6 complètes, dark mode, 3-panel layout, agent 016 intégré, Qdrant fonctionnel, recherche sémantique OK) |
+| **Derniere session** | 2026-03-11 |
+| **Prochaine action** | Phase 2 planification (PWA, notes vocales) |
 | **Bloquant** | Aucun |
 
 ### Phases et avancement detaille
@@ -29,7 +29,7 @@
 |-------|-------------|------------|--------|
 | Phase 0 | Cadrage, stack technique, code initial | 100% | Terminé |
 | Phase 0.5 | PRD, architecture, roadmap | 100% | Terminé (2026-02-24) |
-| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 70% | En cours (1.1-1.5 ✅, memoras.ai LIVE, toutes clés configurées) |
+| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 90% | En cours (1.1-1.6 ✅, dark mode, 3-panel, agent 016, Qdrant ✅, recherche sémantique ✅) |
 | Phase 2 | "Mobile" — PWA, notes vocales, recherche | 0% | Pas commencé |
 | Phase 3 | "Intégrations" — Bot meeting, Wrike, création tâches | 0% | Pas commencé |
 | Phase 4 | "SaaS public" — Multi-user, Stripe, landing page | 0% | Pas commencé |
@@ -48,6 +48,9 @@
 | 2026-03-01 | — | Étape 1.5 (fichiers) : telegramService.js (alertes Standard), hook erreurs globales + /health, ecosystem.config.js (PM2 api+front), next.config.ts (standalone), nginx configs (api + front), deploy.sh + setup-vps.sh, .env.production template. Plan B : frontend VPS au lieu de Cloudflare Pages (routes dynamiques incompatibles export statique) | 50% → 55% |
 | 2026-03-01 | 2h | Étape 1.5 (déploiement) : DNS Cloudflare (3 A records), VPS setup (PostgreSQL 16, PM2, Node 20), Traefik file provider (memora.yml) au lieu de Nginx (port 80 pris par Docker), git clone + npm ci + build standalone, .env.production avec vrais secrets, PM2 start → memoras.ai LIVE (API 200, health OK, front 307) | 55% → 65% |
 | 2026-03-01 | 1.75h | Switch OpenAI → Gemini embeddings (text-embedding-004, gratuit, 768 dim), config R2 (bucket memora-files), Telegram bot alertes (@memora_alertes_bot), GitHub Actions CI/CD (deploy.yml, auto-deploy ~45s), fix UI login/register (icônes chevauchant texte, logo register) | 65% → 70% |
+| 2026-03-11 | — | Tâche 1.4 : Refonte frontend — dark mode (bleu foncé #0d1b2a), glass-morphism, ThemeToggle + ThemeProvider, 3-panel layout espace (sources | contenu | chat comme NotebookLM), composants réutilisables (PageHeader, Modal, ConfirmModal, EmptyState, LoadingSpinner, LoadingScreen), mobile 3 onglets, chat fullscreen | 70% → 78% |
+| 2026-03-11 | — | Tâche 1.6 : Intégration agent 016 — middleware authenticateApiKey + authenticateEither (dual JWT/API key), agent voit tous les espaces, Code Tool "Chercher dans Memora" ajouté dans n8n workflow via REST API (2 nodes: Haiku + Sonnet), system prompts + /help mis à jour, MEMORA_API_KEY configurée sur VPS | 78% → 82% |
+| 2026-03-11 | — | Tâche 1.5.5 : Tests E2E — 12 tests (health, register, login, create space, add source, search, chat, agent auth, list sources, messages, agent search, delete). Tous passent sauf recherche sémantique (Qdrant non connecté, mode dégradé OK) | 82% → 85% |
 
 ---
 
