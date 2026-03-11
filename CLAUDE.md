@@ -17,10 +17,10 @@
 
 | Metrique | Valeur |
 |----------|--------|
-| **Avancement global** | 90% |
-| **Phase actuelle** | Phase 1 — "Mon outil" (1.1-1.6 complètes, dark mode, 3-panel layout, agent 016 intégré, Qdrant fonctionnel, recherche sémantique OK) |
+| **Avancement global** | 92% |
+| **Phase actuelle** | Phase 2.1 — PWA installable + offline déployée, Phase 1 complète |
 | **Derniere session** | 2026-03-11 |
-| **Prochaine action** | Phase 2 planification (PWA, notes vocales) |
+| **Prochaine action** | Tests PWA mobile (Android + iOS), puis Phase 2.2 (notes vocales) |
 | **Bloquant** | Aucun |
 
 ### Phases et avancement detaille
@@ -29,8 +29,8 @@
 |-------|-------------|------------|--------|
 | Phase 0 | Cadrage, stack technique, code initial | 100% | Terminé |
 | Phase 0.5 | PRD, architecture, roadmap | 100% | Terminé (2026-02-24) |
-| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 90% | En cours (1.1-1.6 ✅, dark mode, 3-panel, agent 016, Qdrant ✅, recherche sémantique ✅) |
-| Phase 2 | "Mobile" — PWA, notes vocales, recherche | 0% | Pas commencé |
+| Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 100% | Terminé (1.1-1.6 ✅, Qdrant ✅, recherche sémantique ✅) |
+| Phase 2 | "Mobile" — PWA, notes vocales, recherche | 25% | En cours (2.1 PWA ✅, 2.2-2.4 pas commencé) |
 | Phase 3 | "Intégrations" — Bot meeting, Wrike, création tâches | 0% | Pas commencé |
 | Phase 4 | "SaaS public" — Multi-user, Stripe, landing page | 0% | Pas commencé |
 
@@ -51,6 +51,8 @@
 | 2026-03-11 | — | Tâche 1.4 : Refonte frontend — dark mode (bleu foncé #0d1b2a), glass-morphism, ThemeToggle + ThemeProvider, 3-panel layout espace (sources | contenu | chat comme NotebookLM), composants réutilisables (PageHeader, Modal, ConfirmModal, EmptyState, LoadingSpinner, LoadingScreen), mobile 3 onglets, chat fullscreen | 70% → 78% |
 | 2026-03-11 | — | Tâche 1.6 : Intégration agent 016 — middleware authenticateApiKey + authenticateEither (dual JWT/API key), agent voit tous les espaces, Code Tool "Chercher dans Memora" ajouté dans n8n workflow via REST API (2 nodes: Haiku + Sonnet), system prompts + /help mis à jour, MEMORA_API_KEY configurée sur VPS | 78% → 82% |
 | 2026-03-11 | — | Tâche 1.5.5 : Tests E2E — 12 tests (health, register, login, create space, add source, search, chat, agent auth, list sources, messages, agent search, delete). Tous passent sauf recherche sémantique (Qdrant non connecté, mode dégradé OK) | 82% → 85% |
+| 2026-03-11 | 0.5h | Fix Qdrant VPS : API key auth (Gestimatech2026Qdrant!), fix gemini-embedding-001, test E2E complet (source → embedding → search score 0.49) | 85% → 90% |
+| 2026-03-11 | 1h | Phase 2.1 PWA : manifest.json, service worker (4 stratégies cache), page offline, NetworkToast, auto-refresh dashboard, icônes PNG (Sharp), nettoyage 7 fichiers template Next.js | 90% → 92% |
 
 ---
 
