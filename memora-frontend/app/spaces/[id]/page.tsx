@@ -2,33 +2,38 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Logo from '@/components/Logo';
+import PageHeader from '@/components/PageHeader';
+import EmptyState from '@/components/EmptyState';
+import LoadingScreen from '@/components/LoadingScreen';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import Modal from '@/components/Modal';
 import {
-  getSpace, deleteSource, uploadFile, createSource,
+  getSpace, getSource, deleteSource, uploadFile, createSource,
   getConversations, createConversation, getMessages, sendChatMessage,
   isLoggedIn, logout, getProfile,
 } from '@/lib/api';
+import { exportSourcePDF } from '@/lib/export';
 import type { Space, Source, Conversation, Message, User, SourceType } from '@/lib/types';
 
-type MobileTab = 'sources' | 'chat';
+type MobileTab = 'sources' | 'contenu' | 'chat';
 
 export default function SpaceDetailPage() {
   const router = useRouter();
   const params = useParams();
   const spaceId = Number(params.id);
 
+  // --- États existants ---
   const [space, setSpace] = useState<Space | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mobileTab, setMobileTab] = useState<MobileTab>('sources');
 
   // Sources
   const [showAddSource, setShowAddSource] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Texte rapide
+  // Texte rapide (modale)
   const [showPasteText, setShowPasteText] = useState(false);
   const [pasteNom, setPasteNom] = useState('');
   const [pasteContent, setPasteContent] = useState('');
@@ -42,6 +47,15 @@ export default function SpaceDetailPage() {
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // --- Nouveaux états : layout 3 panneaux ---
+  const [sourcesPanelOpen, setSourcesPanelOpen] = useState(true);
+  const [chatPanelOpen, setChatPanelOpen] = useState(true);
+  const [selectedSource, setSelectedSource] = useState<Source | null>(null);
+  const [selectedSourceLoading, setSelectedSourceLoading] = useState(false);
+  const [chatFullscreen, setChatFullscreen] = useState(false);
+  const [mobileTab, setMobileTab] = useState<MobileTab>('sources');
+
+  // --- Effets ---
   useEffect(() => {
     if (!isLoggedIn()) {
       router.push('/login');
@@ -54,6 +68,7 @@ export default function SpaceDetailPage() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // --- Fonctions métier (inchangées) ---
   async function chargerDonnees() {
     try {
       const [profileRes, spaceRes, convRes] = await Promise.all([
@@ -124,8 +139,26 @@ export default function SpaceDetailPage() {
     try {
       await deleteSource(id);
       setSources((prev) => prev.filter((s) => s.id !== id));
+      // Si la source supprimée était sélectionnée, on la désélectionne
+      if (selectedSource?.id === id) setSelectedSource(null);
     } catch (err) {
       console.error('Erreur suppression source:', err);
+    }
+  }
+
+  // Sélectionner une source et charger ses détails complets
+  async function handleSelectSource(source: Source) {
+    setSelectedSourceLoading(true);
+    setMobileTab('contenu'); // Sur mobile, basculer vers le panneau contenu
+    try {
+      const res = await getSource(source.id);
+      if (res.data?.source) {
+        setSelectedSource(res.data.source);
+      }
+    } catch (err) {
+      console.error('Erreur chargement source:', err);
+    } finally {
+      setSelectedSourceLoading(false);
     }
   }
 
@@ -195,6 +228,12 @@ export default function SpaceDetailPage() {
     }
   }
 
+  function deconnexion() {
+    logout();
+    router.push('/login');
+  }
+
+  // --- Fonctions utilitaires (inchangées) ---
   function getSourceTypeLabel(type: string) {
     const labels: Record<string, string> = {
       text: 'Texte', meeting: 'Meeting', voice_note: 'Note vocale',
@@ -228,23 +267,27 @@ export default function SpaceDetailPage() {
     });
   }
 
+  function formatDuration(seconds: number | null) {
+    if (!seconds) return '';
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    if (min === 0) return `${sec}s`;
+    return `${min}min${sec > 0 ? ` ${sec}s` : ''}`;
+  }
+
+  // --- États de chargement ---
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[var(--color-bg-secondary)] flex items-center justify-center">
-        <div className="text-center">
-          <Logo size="lg" showText className="justify-center mb-6" />
-          <div className="w-8 h-8 border-2 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Chargement de l'espace..." />;
   }
 
   if (!space) return null;
 
-  // === PANNEAU SOURCES ===
+  // ========================================================================
+  // === PANNEAU SOURCES (gauche) ===
+  // ========================================================================
   const sourcesPanel = (
     <div className="flex flex-col h-full">
-      {/* Actions */}
+      {/* En-tête avec actions */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
           Sources ({sources.length})
@@ -305,7 +348,7 @@ export default function SpaceDetailPage() {
         </div>
       )}
 
-      {/* Liste sources */}
+      {/* Liste des sources */}
       <div className="flex-1 overflow-y-auto">
         {sources.length === 0 ? (
           <div className="text-center py-12">
@@ -321,11 +364,14 @@ export default function SpaceDetailPage() {
           <div className="space-y-2">
             {sources.map((source) => {
               const statusBadge = getStatusBadge(source.transcriptionStatus);
+              const isSelected = selectedSource?.id === source.id;
               return (
                 <div
                   key={source.id}
-                  className="card p-3 card-hover group cursor-pointer"
-                  onClick={() => router.push(`/spaces/${spaceId}/source/${source.id}`)}
+                  className={`card p-3 card-hover group cursor-pointer transition-all ${
+                    isSelected ? 'ring-2 ring-[var(--color-accent-primary)]' : ''
+                  }`}
+                  onClick={() => handleSelectSource(source)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-memora-bleu-pale flex items-center justify-center text-[var(--color-accent-primary)] flex-shrink-0">
@@ -370,11 +416,196 @@ export default function SpaceDetailPage() {
     </div>
   );
 
-  // === PANNEAU CHAT ===
+  // ========================================================================
+  // === PANNEAU CONTENU CENTRAL ===
+  // ========================================================================
+  const contenuPanel = (
+    <div className="flex flex-col h-full">
+      {selectedSourceLoading ? (
+        // Chargement de la source
+        <div className="flex-1 flex items-center justify-center">
+          <LoadingSpinner size="lg" />
+        </div>
+      ) : selectedSource ? (
+        // Source sélectionnée — affichage du contenu
+        <>
+          {/* En-tête de la source */}
+          <div
+            className="flex items-center justify-between pb-4 mb-4 flex-shrink-0"
+            style={{ borderBottom: '1px solid var(--color-border)' }}
+          >
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-bold text-[var(--color-accent-primary)] truncate">
+                {selectedSource.nom}
+              </h2>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className={`badge ${getSourceTypeBadge(selectedSource.type)}`}>
+                  {getSourceTypeLabel(selectedSource.type)}
+                </span>
+                {selectedSource.transcriptionStatus !== 'none' && (
+                  <span className={`badge ${getStatusBadge(selectedSource.transcriptionStatus).classe}`}>
+                    {getStatusBadge(selectedSource.transcriptionStatus).label}
+                  </span>
+                )}
+                <span className="text-xs text-[var(--color-text-secondary)]">
+                  {formatDate(selectedSource.createdAt)}
+                </span>
+                {selectedSource.durationSeconds && (
+                  <span className="text-xs text-[var(--color-text-secondary)]">
+                    {formatDuration(selectedSource.durationSeconds)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+              {/* Bouton fermer la source (mobile-friendly) */}
+              <button
+                onClick={() => { setSelectedSource(null); setMobileTab('sources'); }}
+                className="btn btn-ghost btn-sm text-xs"
+                title="Fermer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              {/* Bouton export PDF */}
+              <button
+                onClick={() => exportSourcePDF(selectedSource, space?.nom)}
+                className="btn btn-outline btn-sm text-xs"
+                title="Exporter en PDF"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                PDF
+              </button>
+            </div>
+          </div>
+
+          {/* Corps défilable */}
+          <div className="flex-1 overflow-y-auto space-y-6">
+            {/* Contenu principal (transcription ou texte) */}
+            {selectedSource.transcriptionStatus === 'processing' || selectedSource.transcriptionStatus === 'pending' ? (
+              <div className="flex items-center gap-3 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-bg-hover)' }}>
+                <LoadingSpinner size="sm" />
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  Transcription en cours... Reviens dans quelques instants.
+                </p>
+              </div>
+            ) : selectedSource.content ? (
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+                  {selectedSource.type === 'meeting' || selectedSource.type === 'voice_note' ? 'Transcription' : 'Contenu'}
+                </h3>
+                <div
+                  className="p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap"
+                  style={{
+                    backgroundColor: 'var(--color-bg-hover)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  {selectedSource.content}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-bg-hover)' }}>
+                <p className="text-sm text-[var(--color-text-secondary)] italic">
+                  Aucun contenu disponible.
+                </p>
+              </div>
+            )}
+
+            {/* Résumé (si disponible) */}
+            {selectedSource.summary && (
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+                  Résumé
+                </h3>
+                <div
+                  className="p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap"
+                  style={{
+                    backgroundColor: 'var(--color-bg-hover)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-accent-primary)',
+                    borderLeftWidth: '3px',
+                  }}
+                >
+                  {selectedSource.summary}
+                </div>
+                {selectedSource.summaryModel && (
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                    Modèle : {selectedSource.summaryModel}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Métadonnées */}
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+                Informations
+              </h3>
+              <div className="card p-4">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <dt className="text-[var(--color-text-secondary)]">Type</dt>
+                  <dd className="text-[var(--color-text-primary)] font-medium">{getSourceTypeLabel(selectedSource.type)}</dd>
+
+                  <dt className="text-[var(--color-text-secondary)]">Créée le</dt>
+                  <dd className="text-[var(--color-text-primary)]">{formatDate(selectedSource.createdAt)}</dd>
+
+                  {selectedSource.durationSeconds && (
+                    <>
+                      <dt className="text-[var(--color-text-secondary)]">Durée</dt>
+                      <dd className="text-[var(--color-text-primary)]">{formatDuration(selectedSource.durationSeconds)}</dd>
+                    </>
+                  )}
+
+                  {selectedSource.speakers && selectedSource.speakers.length > 0 && (
+                    <>
+                      <dt className="text-[var(--color-text-secondary)]">Participants</dt>
+                      <dd className="text-[var(--color-text-primary)]">{selectedSource.speakers.join(', ')}</dd>
+                    </>
+                  )}
+
+                  {selectedSource.fileSize && (
+                    <>
+                      <dt className="text-[var(--color-text-secondary)]">Taille</dt>
+                      <dd className="text-[var(--color-text-primary)]">
+                        {(selectedSource.fileSize / 1024 / 1024).toFixed(2)} Mo
+                      </dd>
+                    </>
+                  )}
+                </dl>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        // Aucune source sélectionnée — état vide
+        <div className="flex-1 flex items-center justify-center">
+          <EmptyState
+            icon={
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            }
+            title="Sélectionne une source"
+            description="Clique sur une source dans la liste pour voir son contenu ici."
+          />
+        </div>
+      )}
+    </div>
+  );
+
+  // ========================================================================
+  // === PANNEAU CHAT (droite) ===
+  // ========================================================================
   const chatPanel = (
     <div className="flex flex-col h-full">
-      {/* Header conversations */}
-      <div className="flex items-center justify-between mb-4">
+      {/* En-tête conversations */}
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
           Chat IA
         </h2>
@@ -386,7 +617,7 @@ export default function SpaceDetailPage() {
                 const conv = conversations.find(c => c.id === Number(e.target.value));
                 if (conv) handleSwitchConversation(conv);
               }}
-              className="input text-xs py-1 px-2 max-w-[160px]"
+              className="input text-xs py-1 px-2 max-w-[140px]"
             >
               {conversations.map((c, i) => (
                 <option key={c.id} value={c.id}>
@@ -397,6 +628,24 @@ export default function SpaceDetailPage() {
           )}
           <button onClick={handleNewConversation} className="btn btn-outline btn-sm text-xs">
             + Nouvelle
+          </button>
+          {/* Bouton plein écran (desktop seulement) */}
+          <button
+            onClick={() => setChatFullscreen(!chatFullscreen)}
+            className="hidden lg:flex btn btn-ghost btn-sm p-1"
+            title={chatFullscreen ? 'Réduire' : 'Plein écran'}
+          >
+            {chatFullscreen ? (
+              // Icône réduire
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+              </svg>
+            ) : (
+              // Icône agrandir
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+              </svg>
+            )}
           </button>
         </div>
       </div>
@@ -454,8 +703,8 @@ export default function SpaceDetailPage() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSendMessage} className="flex gap-2">
+      {/* Champ de saisie */}
+      <form onSubmit={handleSendMessage} className="flex gap-2 flex-shrink-0">
         <input
           type="text"
           value={chatInput}
@@ -473,136 +722,189 @@ export default function SpaceDetailPage() {
     </div>
   );
 
+  // ========================================================================
+  // === RENDU PRINCIPAL ===
+  // ========================================================================
   return (
     <div className="min-h-screen bg-[var(--color-bg-secondary)] flex flex-col">
       {/* Header */}
-      <header className="bg-[var(--color-bg-primary)] border-b border-[var(--color-border)] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="text-[var(--color-text-secondary)] hover:text-[var(--color-accent-primary)] transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div>
-                <h1 className="text-base font-bold text-[var(--color-accent-primary)] truncate max-w-[250px] sm:max-w-[400px]">
-                  {space.nom}
-                </h1>
-                {space.description && (
-                  <p className="text-xs text-[var(--color-text-secondary)] truncate max-w-[300px] hidden sm:block">
-                    {space.description}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {space.tags && space.tags.length > 0 && (
-                <div className="hidden md:flex gap-1.5">
-                  {space.tags.map((tag) => (
-                    <span key={tag} className="badge badge-primary text-xs">{tag}</span>
-                  ))}
-                </div>
-              )}
-              {user && (
-                <span className="text-sm text-[var(--color-text-secondary)] hidden sm:block">
-                  {user.firstName || user.email}
-                </span>
-              )}
-              <button onClick={() => { logout(); router.push('/login'); }} className="btn btn-ghost btn-sm">
-                Déconnexion
-              </button>
-            </div>
+      <PageHeader
+        title={space.nom}
+        subtitle={space.description || undefined}
+        backHref="/dashboard"
+      >
+        {space.tags && space.tags.length > 0 && (
+          <div className="hidden md:flex gap-1.5">
+            {space.tags.map((tag) => (
+              <span key={tag} className="badge badge-primary text-xs">{tag}</span>
+            ))}
           </div>
-        </div>
-      </header>
+        )}
+        {user && (
+          <span className="text-sm text-[var(--color-text-secondary)] hidden sm:block">
+            {user.firstName || user.email}
+          </span>
+        )}
+        <button onClick={deconnexion} className="btn btn-ghost btn-sm text-sm">
+          Déconnexion
+        </button>
+      </PageHeader>
 
-      {/* Toggle mobile (visible seulement sur petit écran) */}
+      {/* Tabs mobile (visible seulement < lg) */}
       <div className="lg:hidden bg-[var(--color-bg-primary)] border-b border-[var(--color-border)]">
-        <div className="max-w-7xl mx-auto px-4 flex gap-4">
-          <button
-            onClick={() => setMobileTab('sources')}
-            className={`py-2.5 text-sm font-medium border-b-2 transition-colors ${mobileTab === 'sources' ? 'border-[var(--color-accent-primary)] text-[var(--color-accent-primary)]' : 'border-transparent text-[var(--color-text-secondary)]'}`}
-          >
-            Sources ({sources.length})
-          </button>
-          <button
-            onClick={() => setMobileTab('chat')}
-            className={`py-2.5 text-sm font-medium border-b-2 transition-colors ${mobileTab === 'chat' ? 'border-[var(--color-accent-primary)] text-[var(--color-accent-primary)]' : 'border-transparent text-[var(--color-text-secondary)]'}`}
-          >
-            Chat IA
-          </button>
+        <div className="px-4 flex gap-4">
+          {(['sources', 'contenu', 'chat'] as MobileTab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setMobileTab(tab)}
+              className={`py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${
+                mobileTab === tab
+                  ? 'border-[var(--color-accent-secondary)] text-[var(--color-accent-primary)]'
+                  : 'border-transparent text-[var(--color-text-secondary)]'
+              }`}
+            >
+              {tab === 'sources' && `Sources (${sources.length})`}
+              {tab === 'contenu' && 'Contenu'}
+              {tab === 'chat' && 'Chat IA'}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Layout principal */}
-      {/* Desktop : côte-à-côte | Mobile : onglets */}
-      <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4">
-        {/* Desktop : 2 colonnes */}
-        <div className="hidden lg:grid lg:grid-cols-5 lg:gap-6 h-[calc(100vh-120px)]">
-          {/* Sources — 2/5 */}
-          <div className="col-span-2 overflow-hidden">
-            {sourcesPanel}
+      {/* Chat plein écran (overlay) */}
+      {chatFullscreen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col p-6"
+          style={{ backgroundColor: 'var(--color-bg-secondary)' }}
+        >
+          {/* Barre du haut en plein écran */}
+          <div className="flex items-center justify-between mb-4 flex-shrink-0">
+            <h2 className="text-lg font-bold text-[var(--color-accent-primary)]">
+              Chat IA — {space.nom}
+            </h2>
+            <button
+              onClick={() => setChatFullscreen(false)}
+              className="btn btn-ghost btn-sm"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Fermer
+            </button>
           </div>
-          {/* Chat — 3/5 */}
-          <div className="col-span-3 overflow-hidden">
+          <div className="flex-1 overflow-hidden">
             {chatPanel}
           </div>
         </div>
+      )}
 
-        {/* Mobile : onglets */}
-        <div className="lg:hidden h-[calc(100vh-160px)]">
-          {mobileTab === 'sources' ? sourcesPanel : chatPanel}
+      {/* Layout principal desktop (>= lg) : 3 panneaux */}
+      <div className="hidden lg:flex flex-1 overflow-hidden">
+        {/* Panneau Sources (gauche, 280px, collapsible) */}
+        <div
+          className="flex-shrink-0 transition-all duration-300 overflow-hidden border-r border-[var(--color-border)] relative"
+          style={{ width: sourcesPanelOpen ? 280 : 0 }}
+        >
+          <div className="h-full p-4 overflow-hidden" style={{ width: 280 }}>
+            {sourcesPanel}
+          </div>
+        </div>
+
+        {/* Bouton toggle Sources */}
+        <button
+          onClick={() => setSourcesPanelOpen(!sourcesPanelOpen)}
+          className="flex-shrink-0 flex items-center justify-center w-6 hover:bg-[var(--color-bg-hover)] transition-colors"
+          style={{ color: 'var(--color-text-secondary)' }}
+          title={sourcesPanelOpen ? 'Masquer les sources' : 'Afficher les sources'}
+        >
+          <svg
+            className={`w-4 h-4 transition-transform duration-300 ${sourcesPanelOpen ? '' : 'rotate-180'}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        {/* Panneau Contenu central (flex-1, prend le reste) */}
+        <div className="flex-1 min-w-0 p-4 overflow-hidden">
+          {contenuPanel}
+        </div>
+
+        {/* Bouton toggle Chat */}
+        <button
+          onClick={() => setChatPanelOpen(!chatPanelOpen)}
+          className="flex-shrink-0 flex items-center justify-center w-6 hover:bg-[var(--color-bg-hover)] transition-colors"
+          style={{ color: 'var(--color-text-secondary)' }}
+          title={chatPanelOpen ? 'Masquer le chat' : 'Afficher le chat'}
+        >
+          <svg
+            className={`w-4 h-4 transition-transform duration-300 ${chatPanelOpen ? '' : 'rotate-180'}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        {/* Panneau Chat (droite, 380px, collapsible) */}
+        <div
+          className="flex-shrink-0 transition-all duration-300 overflow-hidden border-l border-[var(--color-border)] relative"
+          style={{ width: chatPanelOpen ? 380 : 0 }}
+        >
+          <div className="h-full p-4 overflow-hidden" style={{ width: 380 }}>
+            {chatPanel}
+          </div>
         </div>
       </div>
 
-      {/* Modal coller texte */}
-      {showPasteText && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPasteText(false)} />
-          <div className="card relative z-10 w-full max-w-lg p-6 shadow-medium">
-            <h2 className="text-xl font-bold text-[var(--color-accent-primary)] mb-4">
-              {pasteType === 'meeting' ? 'Ajouter une transcription' : 'Ajouter du texte'}
-            </h2>
-            <form onSubmit={handlePasteText} className="space-y-4">
-              <div>
-                <label className="label">Nom *</label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={pasteNom}
-                  onChange={(e) => setPasteNom(e.target.value)}
-                  required
-                  placeholder={pasteType === 'meeting' ? 'Ex: Meeting client 1er mars' : 'Ex: Notes de réunion'}
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="label">Contenu *</label>
-                <textarea
-                  value={pasteContent}
-                  onChange={(e) => setPasteContent(e.target.value)}
-                  required
-                  placeholder="Colle ton texte ici..."
-                  rows={8}
-                  className="input resize-none"
-                />
-              </div>
-              <div className="flex gap-3 justify-end">
-                <button type="button" onClick={() => setShowPasteText(false)} className="btn btn-ghost">
-                  Annuler
-                </button>
-                <button type="submit" disabled={!pasteNom.trim() || !pasteContent.trim()} className="btn btn-primary">
-                  Ajouter
-                </button>
-              </div>
-            </form>
-          </div>
+      {/* Layout mobile (< lg) : un seul panneau selon le tab actif */}
+      <div className="lg:hidden flex-1 overflow-hidden p-4">
+        <div className="h-full overflow-hidden">
+          {mobileTab === 'sources' && sourcesPanel}
+          {mobileTab === 'contenu' && contenuPanel}
+          {mobileTab === 'chat' && chatPanel}
         </div>
-      )}
+      </div>
+
+      {/* Modale coller texte */}
+      <Modal
+        open={showPasteText}
+        onClose={() => setShowPasteText(false)}
+        title={pasteType === 'meeting' ? 'Ajouter une transcription' : 'Ajouter du texte'}
+      >
+        <form onSubmit={handlePasteText} className="space-y-4">
+          <div>
+            <label className="label">Nom *</label>
+            <input
+              autoFocus
+              type="text"
+              value={pasteNom}
+              onChange={(e) => setPasteNom(e.target.value)}
+              required
+              placeholder={pasteType === 'meeting' ? 'Ex: Meeting client 1er mars' : 'Ex: Notes de réunion'}
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="label">Contenu *</label>
+            <textarea
+              value={pasteContent}
+              onChange={(e) => setPasteContent(e.target.value)}
+              required
+              placeholder="Colle ton texte ici..."
+              rows={8}
+              className="input resize-none"
+            />
+          </div>
+          <div className="flex gap-3 justify-end">
+            <button type="button" onClick={() => setShowPasteText(false)} className="btn btn-ghost">
+              Annuler
+            </button>
+            <button type="submit" disabled={!pasteNom.trim() || !pasteContent.trim()} className="btn btn-primary">
+              Ajouter
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Logo from '@/components/Logo';
+import PageHeader from '@/components/PageHeader';
+import LoadingScreen from '@/components/LoadingScreen';
 import { getSource, isLoggedIn, logout } from '@/lib/api';
 import { exportSourcePDF } from '@/lib/export';
 import type { Source } from '@/lib/types';
@@ -81,14 +82,7 @@ export default function SourceDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[var(--color-bg-secondary)] flex items-center justify-center">
-        <div className="text-center">
-          <Logo size="lg" showText className="justify-center mb-6" />
-          <div className="w-8 h-8 border-2 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Chargement de la source..." />;
   }
 
   if (!source) {
@@ -260,56 +254,34 @@ export default function SourceDetailPage() {
   return (
     <div className="min-h-screen bg-[var(--color-bg-secondary)] flex flex-col">
       {/* Header */}
-      <header className="bg-[var(--color-bg-primary)] border-b border-[var(--color-border)] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push(`/spaces/${spaceId}`)}
-                className="text-[var(--color-text-secondary)] hover:text-[var(--color-accent-primary)] transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div>
-                <h1 className="text-base font-bold text-[var(--color-accent-primary)] truncate max-w-[250px] sm:max-w-[500px]">
-                  {source.nom}
-                </h1>
-                <div className="flex items-center gap-2">
-                  <span className="badge badge-primary text-xs">{getTypeLabel(source.type)}</span>
-                  {source.durationSeconds && (
-                    <span className="text-xs text-[var(--color-text-secondary)]">{formatDuration(source.durationSeconds)}</span>
-                  )}
-                  {isAudio && (
-                    <span className={`badge ${statusInfo.classe} text-xs`}>{statusInfo.label}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {(source as Source & { spaceNom?: string }).spaceNom && (
-                <span className="text-sm text-[var(--color-text-secondary)] hidden sm:block">
-                  {(source as Source & { spaceNom?: string }).spaceNom}
-                </span>
-              )}
-              <button
-                onClick={() => exportSourcePDF(source, (source as Source & { spaceNom?: string }).spaceNom)}
-                className="btn btn-outline btn-sm flex items-center gap-1.5"
-                title="Exporter en PDF"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span className="hidden sm:inline">PDF</span>
-              </button>
-              <button onClick={() => { logout(); router.push('/login'); }} className="btn btn-ghost btn-sm">
-                Déconnexion
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title={source.nom}
+        subtitle={[
+          getTypeLabel(source.type),
+          source.durationSeconds ? formatDuration(source.durationSeconds) : null,
+          isAudio ? statusInfo.label : null,
+        ].filter(Boolean).join(' · ')}
+        backHref={`/spaces/${spaceId}`}
+      >
+        {(source as Source & { spaceNom?: string }).spaceNom && (
+          <span className="text-sm hidden sm:block" style={{ color: 'var(--color-text-secondary)' }}>
+            {(source as Source & { spaceNom?: string }).spaceNom}
+          </span>
+        )}
+        <button
+          onClick={() => exportSourcePDF(source, (source as Source & { spaceNom?: string }).spaceNom)}
+          className="btn btn-outline btn-sm flex items-center gap-1.5"
+          title="Exporter en PDF"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span className="hidden sm:inline">PDF</span>
+        </button>
+        <button onClick={() => { logout(); router.push('/login'); }} className="btn btn-ghost btn-sm">
+          Déconnexion
+        </button>
+      </PageHeader>
 
       {/* Toggle mobile */}
       <div className="lg:hidden bg-[var(--color-bg-primary)] border-b border-[var(--color-border)]">

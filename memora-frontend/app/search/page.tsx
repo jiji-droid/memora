@@ -2,7 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Logo from '@/components/Logo';
+import PageHeader from '@/components/PageHeader';
+import EmptyState from '@/components/EmptyState';
+import LoadingScreen from '@/components/LoadingScreen';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { isLoggedIn, logout, getSpaces, searchInSpace } from '@/lib/api';
 import type { Space, SearchResult } from '@/lib/types';
 
@@ -82,31 +85,23 @@ function SearchContent() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-secondary)]">
-      {/* Header */}
-      <header className="bg-[var(--color-bg-primary)] border-b border-[var(--color-border)] sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-6">
-            <button onClick={() => router.push('/dashboard')} className="flex items-center gap-3">
-              <Logo size="sm" showText />
-            </button>
-
-            <form onSubmit={handleSearch} className="flex-1 max-w-2xl">
-              <div className="relative">
-                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Recherche sémantique dans tes espaces..."
-                  className="input pl-12"
-                />
-              </div>
-            </form>
+      {/* Header avec barre de recherche en children */}
+      <PageHeader>
+        <form onSubmit={handleSearch} className="flex-1 max-w-2xl">
+          <div className="relative">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Recherche sémantique dans tes espaces..."
+              className="input pl-12"
+            />
           </div>
-        </div>
-      </header>
+        </form>
+      </PageHeader>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Sélecteur d'espace */}
@@ -126,11 +121,11 @@ function SearchContent() {
         {/* Résultats */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-10 h-10 border-2 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin" />
+            <LoadingSpinner size="lg" />
           </div>
         ) : results.length > 0 ? (
           <div className="space-y-4">
-            <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+            <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
               {results.length} résultat{results.length > 1 ? 's' : ''} pour &quot;{query}&quot;
             </p>
             {results.map((result, i) => (
@@ -140,20 +135,23 @@ function SearchContent() {
                 onClick={() => router.push(`/spaces/${selectedSpaceId}/source/${result.sourceId}`)}
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-memora-bleu-pale flex items-center justify-center text-[var(--color-accent-primary)] flex-shrink-0">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: 'var(--color-bg-hover)', color: 'var(--color-accent-primary)' }}
+                  >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-[var(--color-text-primary)]">{result.nom}</h3>
+                      <h3 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{result.nom}</h3>
                       <span className="badge badge-primary">{result.type}</span>
-                      <span className="text-xs text-[var(--color-text-secondary)]">
+                      <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                         Score : {Math.round(result.score * 100)}%
                       </span>
                     </div>
-                    <p className="text-sm text-[var(--color-text-secondary)] line-clamp-3">
+                    <p className="text-sm line-clamp-3" style={{ color: 'var(--color-text-secondary)' }}>
                       {highlightMatch(result.texte, query)}
                     </p>
                   </div>
@@ -162,20 +160,25 @@ function SearchContent() {
             ))}
           </div>
         ) : query ? (
-          <div className="card p-16 text-center">
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">Aucun résultat</h2>
-            <p className="text-[var(--color-text-secondary)]">Aucune source ne correspond à &quot;{query}&quot;</p>
-          </div>
-        ) : (
-          <div className="card p-16 text-center">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-memora-bleu-pale flex items-center justify-center">
-              <svg className="w-10 h-10 text-[var(--color-accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <EmptyState
+            icon={
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-            </div>
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">Recherche sémantique</h2>
-            <p className="text-[var(--color-text-secondary)]">Tape un mot ou une phrase pour trouver du contenu dans tes sources</p>
-          </div>
+            }
+            title="Aucun résultat"
+            description={`Aucune source ne correspond à "${query}"`}
+          />
+        ) : (
+          <EmptyState
+            icon={
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            }
+            title="Recherche sémantique"
+            description="Tape un mot ou une phrase pour trouver du contenu dans tes sources"
+          />
         )}
       </main>
     </div>
@@ -184,11 +187,7 @@ function SearchContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[var(--color-bg-secondary)] flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense fallback={<LoadingScreen message="Chargement de la recherche..." />}>
       <SearchContent />
     </Suspense>
   );

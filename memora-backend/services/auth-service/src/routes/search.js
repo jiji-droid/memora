@@ -17,6 +17,10 @@ const SQL = {
   VERIFIER_ESPACE: `
     SELECT id FROM spaces WHERE id = $1 AND user_id = $2`,
 
+  /** Vérifie que l'espace existe (sans filtre user_id — pour l'agent 016) */
+  VERIFIER_ESPACE_AGENT: `
+    SELECT id FROM spaces WHERE id = $1`,
+
   /** Enrichit les résultats Qdrant avec les infos complètes des sources */
   INFOS_SOURCES: `
     SELECT id, type, nom, created_at, updated_at
@@ -26,14 +30,15 @@ const SQL = {
 
 /**
  * Configure la route de recherche sémantique
- * Utilise fastify.authenticate (défini dans index.js) pour l'authentification JWT
+ * Utilise fastify.authenticateEither (JWT ou API Key) pour permettre l'accès à l'agent 016
  */
 async function searchRoutes(fastify) {
 
   // ============================================
   // RECHERCHER DANS UN ESPACE : GET /spaces/:spaceId/search
   // ============================================
-  fastify.get('/spaces/:spaceId/search', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/spaces/:spaceId/search', { preHandler: [fastify.authenticateEither] }, async (request, reply) => {
+    const estAgent = request.user.isAgent === true;
     const userId = request.user.userId;
     const spaceId = parseInt(request.params.spaceId);
     const requete = request.query.q;
@@ -48,8 +53,13 @@ async function searchRoutes(fastify) {
     }
 
     try {
-      // Vérifier que l'espace appartient à l'utilisateur (Pattern E)
-      const espaceCheck = await db.query(SQL.VERIFIER_ESPACE, [spaceId, userId]);
+      // Vérifier que l'espace existe — agent : pas de filtre user_id
+      let espaceCheck;
+      if (estAgent) {
+        espaceCheck = await db.query(SQL.VERIFIER_ESPACE_AGENT, [spaceId]);
+      } else {
+        espaceCheck = await db.query(SQL.VERIFIER_ESPACE, [spaceId, userId]);
+      }
       if (espaceCheck.rows.length === 0) {
         return reply.status(404).send({
           success: false,

@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Logo from '@/components/Logo';
+import PageHeader from '@/components/PageHeader';
+import Modal from '@/components/Modal';
+import ConfirmModal from '@/components/ConfirmModal';
+import EmptyState from '@/components/EmptyState';
+import LoadingScreen from '@/components/LoadingScreen';
 import {
   getSpaces, createSpace, deleteSpace, updateSpace,
   isLoggedIn, logout, getProfile,
@@ -126,46 +130,25 @@ export default function DashboardPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[var(--color-bg-secondary)] flex items-center justify-center">
-        <div className="text-center">
-          <Logo size="lg" showText className="justify-center mb-6" />
-          <div className="w-8 h-8 border-2 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="mt-4 text-sm text-[var(--color-text-secondary)]">Chargement de tes espaces...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Chargement de tes espaces..." />;
   }
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-secondary)]">
       {/* Header */}
-      <header className="bg-[var(--color-bg-primary)] border-b border-[var(--color-border)] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Logo size="sm" showText />
-
-            {/* Actions */}
-            <div className="flex items-center gap-4">
-              {user && (
-                <span className="text-sm text-[var(--color-text-secondary)] hidden sm:block">
-                  {user.firstName || user.email}
-                </span>
-              )}
-              <button
-                onClick={handleLogout}
-                className="btn btn-ghost btn-sm"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Déconnexion
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader>
+        {user && (
+          <span className="text-sm hidden sm:block" style={{ color: 'var(--color-text-secondary)' }}>
+            {user.firstName || user.email}
+          </span>
+        )}
+        <button onClick={handleLogout} className="btn btn-ghost btn-sm">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Déconnexion
+        </button>
+      </PageHeader>
 
       {/* Contenu principal */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -216,28 +199,16 @@ export default function DashboardPage() {
 
         {/* Liste des espaces */}
         {spaces.length === 0 ? (
-          <div className="card p-16 text-center animate-fade-in">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-memora-bleu-pale flex items-center justify-center">
-              <svg className="w-10 h-10 text-[var(--color-accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <EmptyState
+            icon={
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
-            </div>
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
-              Aucun espace encore
-            </h2>
-            <p className="text-[var(--color-text-secondary)] mb-6 max-w-md mx-auto">
-              Crée ton premier espace pour commencer à capturer tes meetings, notes vocales et documents.
-            </p>
-            <button
-              onClick={() => setShowNewSpace(true)}
-              className="btn btn-primary"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Créer mon premier espace
-            </button>
-          </div>
+            }
+            title="Aucun espace encore"
+            description="Crée ton premier espace pour commencer à capturer tes meetings, notes vocales et documents."
+            action={{ label: 'Créer mon premier espace', onClick: () => setShowNewSpace(true) }}
+          />
         ) : viewMode === 'grid' ? (
           /* Grille */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -415,107 +386,69 @@ export default function DashboardPage() {
       </main>
 
       {/* Modal création d'espace */}
-      {showNewSpace && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowNewSpace(false)}
-          />
-          <div className="card relative z-10 w-full max-w-lg p-6 shadow-medium animate-scale-in">
-            <h2 className="text-xl font-bold text-[var(--color-accent-primary)] mb-4">
-              Nouvel espace
-            </h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="label">Nom de l&apos;espace *</label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={newNom}
-                  onChange={(e) => setNewNom(e.target.value)}
-                  required
-                  placeholder="Ex: Projet St-Laurent, Formation IA, Meetings hebdo..."
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="label">Description (optionnel)</label>
-                <textarea
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="De quoi traite cet espace ?"
-                  rows={3}
-                  className="input resize-none"
-                />
-              </div>
-              <div className="flex gap-3 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewSpace(false)}
-                  className="btn btn-ghost"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating || !newNom.trim()}
-                  className="btn btn-primary"
-                >
-                  {creating ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Création...
-                    </span>
-                  ) : (
-                    'Créer l\'espace'
-                  )}
-                </button>
-              </div>
-            </form>
+      <Modal open={showNewSpace} onClose={() => setShowNewSpace(false)} title="Nouvel espace">
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="label">Nom de l&apos;espace *</label>
+            <input
+              autoFocus
+              type="text"
+              value={newNom}
+              onChange={(e) => setNewNom(e.target.value)}
+              required
+              placeholder="Ex: Projet St-Laurent, Formation IA, Meetings hebdo..."
+              className="input"
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="label">Description (optionnel)</label>
+            <textarea
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="De quoi traite cet espace ?"
+              rows={3}
+              className="input resize-none"
+            />
+          </div>
+          <div className="flex gap-3 justify-end pt-2">
+            <button
+              type="button"
+              onClick={() => setShowNewSpace(false)}
+              className="btn btn-ghost"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={creating || !newNom.trim()}
+              className="btn btn-primary"
+            >
+              {creating ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Création...
+                </span>
+              ) : (
+                'Créer l\'espace'
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Modal suppression */}
-      {deleteModal.show && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setDeleteModal({ show: false, id: null, nom: '' })}
-          />
-          <div className="card relative z-10 w-full max-w-md p-6 shadow-medium animate-scale-in">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-error-50 flex items-center justify-center">
-              <svg className="w-6 h-6 text-error-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-bold text-center text-[var(--color-text-primary)] mb-2">
-              Supprimer cet espace ?
-            </h3>
-            <p className="text-center text-[var(--color-text-secondary)] mb-6">
-              L&apos;espace <strong>&quot;{deleteModal.nom}&quot;</strong> et toutes ses sources seront supprimés définitivement.
-            </p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => setDeleteModal({ show: false, id: null, nom: '' })}
-                className="btn btn-ghost"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleDelete}
-                className="btn text-white font-semibold"
-                style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}
-              >
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={deleteModal.show}
+        onClose={() => setDeleteModal({ show: false, id: null, nom: '' })}
+        onConfirm={handleDelete}
+        title="Supprimer cet espace ?"
+        message={`L'espace "${deleteModal.nom}" et toutes ses sources seront supprimés définitivement.`}
+        confirmLabel="Supprimer"
+        variant="danger"
+      />
     </div>
   );
 }

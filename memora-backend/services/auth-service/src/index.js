@@ -44,13 +44,47 @@ fastify.register(require('@fastify/jwt'), {
   secret: JWT_SECRET
 });
 
-// Middleware d'authentification centralisé — utilisé par toutes les routes protégées
+// Middleware d'authentification JWT — utilisé par les routes protégées standard
 fastify.decorate('authenticate', async function (request, reply) {
   try {
     await request.jwtVerify();
   } catch (err) {
     reply.status(401).send({ success: false, error: 'Non autorisé' });
   }
+});
+
+// Middleware d'authentification par API Key — utilisé par l'agent 016 (n8n)
+fastify.decorate('authenticateApiKey', async function (request, reply) {
+  const apiKey = request.headers['x-api-key'];
+  const attendue = process.env.AGENT_API_KEY;
+
+  if (!attendue) {
+    reply.status(503).send({ success: false, error: 'API Key non configurée sur le serveur' });
+    return;
+  }
+
+  if (!apiKey || apiKey !== attendue) {
+    reply.status(401).send({ success: false, error: 'API Key invalide' });
+    return;
+  }
+
+  request.user = { userId: null, isAgent: true, agentName: 'agent-016' };
+});
+
+// Middleware combiné — accepte JWT OU API Key (pour routes accessibles par l'agent ET les users)
+fastify.decorate('authenticateEither', async function (request, reply) {
+  const apiKey = request.headers['x-api-key'];
+  const authHeader = request.headers['authorization'];
+
+  if (apiKey) {
+    return fastify.authenticateApiKey(request, reply);
+  }
+
+  if (authHeader) {
+    return fastify.authenticate(request, reply);
+  }
+
+  reply.status(401).send({ success: false, error: 'Authentification requise (JWT ou X-API-KEY)' });
 });
 
 // Enregistrer les routes

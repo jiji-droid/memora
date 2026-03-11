@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Logo from '@/components/Logo';
+import PageHeader from '@/components/PageHeader';
+import Modal from '@/components/Modal';
+import LoadingScreen from '@/components/LoadingScreen';
+import EmptyState from '@/components/EmptyState';
 import {
   isLoggedIn, getProfile, logout,
   getSummaryModels, createSummaryModel, updateSummaryModel,
@@ -133,37 +136,19 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[var(--color-bg-secondary)] flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingScreen message="Chargement des paramètres..." />;
   }
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-secondary)]">
       {/* Header */}
-      <header className="bg-[var(--color-bg-primary)] border-b border-[var(--color-border)] sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <button onClick={() => router.push('/dashboard')} className="text-[var(--color-text-secondary)] hover:text-[var(--color-accent-primary)]">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <Logo size="sm" showText />
-            </div>
-            <button onClick={() => { logout(); router.push('/login'); }} className="btn btn-ghost btn-sm">
-              Déconnexion
-            </button>
-          </div>
-        </div>
-      </header>
+      <PageHeader title="Paramètres" backHref="/dashboard">
+        <button onClick={() => { logout(); router.push('/login'); }} className="btn btn-ghost btn-sm">
+          Déconnexion
+        </button>
+      </PageHeader>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-[var(--color-accent-primary)] mb-8">Paramètres</h1>
-
         {/* Profil */}
         <section className="card p-6 mb-8">
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Profil</h2>
@@ -196,9 +181,16 @@ export default function SettingsPage() {
           </div>
 
           {models.length === 0 ? (
-            <p className="text-center text-[var(--color-text-secondary)] py-8">
-              Aucun modèle de résumé. Crée ton premier modèle.
-            </p>
+            <EmptyState
+              icon={
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              }
+              title="Aucun modèle de résumé"
+              description="Crée ton premier modèle pour personnaliser les résumés de tes sources."
+              action={{ label: 'Nouveau modèle', onClick: ouvrirCreation }}
+            />
           ) : (
             <div className="space-y-3">
               {models.map((model) => (
@@ -259,86 +251,82 @@ export default function SettingsPage() {
         </section>
       </main>
 
-      {/* Modal création modèle */}
-      {showCreateModel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={fermerModal} />
-          <div className="card relative z-10 w-full max-w-lg p-6 shadow-medium animate-scale-in">
-            <h2 className="text-xl font-bold text-[var(--color-accent-primary)] mb-4">
-              {editingModel ? 'Modifier le modèle' : 'Nouveau modèle de résumé'}
-            </h2>
-            <form onSubmit={handleSubmitModel} className="space-y-4">
-              <div>
-                <label className="label">Nom *</label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={modelName}
-                  onChange={(e) => setModelName(e.target.value)}
-                  required
-                  placeholder="Ex: Résumé exécutif"
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="label">Description</label>
-                <input
-                  type="text"
-                  value={modelDescription}
-                  onChange={(e) => setModelDescription(e.target.value)}
-                  placeholder="Brève description du modèle"
-                  className="input"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Ton</label>
-                  <select
-                    value={modelTone}
-                    onChange={(e) => setModelTone(e.target.value)}
-                    className="input"
-                  >
-                    <option value="professionnel">Professionnel</option>
-                    <option value="concis">Concis</option>
-                    <option value="détaillé">Détaillé</option>
-                    <option value="conversationnel">Conversationnel</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="label">Niveau de détail</label>
-                  <select
-                    value={modelDetailLevel}
-                    onChange={(e) => setModelDetailLevel(Number(e.target.value))}
-                    className="input"
-                  >
-                    {[1, 2, 3, 4, 5].map(n => (
-                      <option key={n} value={n}>{n} / 5</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="label">Sections (séparées par des virgules)</label>
-                <input
-                  type="text"
-                  value={modelSections}
-                  onChange={(e) => setModelSections(e.target.value)}
-                  placeholder="Points clés, Décisions, Actions à suivre"
-                  className="input"
-                />
-              </div>
-              <div className="flex gap-3 justify-end pt-2">
-                <button type="button" onClick={fermerModal} className="btn btn-ghost">
-                  Annuler
-                </button>
-                <button type="submit" disabled={creating || !modelName.trim()} className="btn btn-primary">
-                  {creating ? 'Sauvegarde...' : editingModel ? 'Enregistrer' : 'Créer'}
-                </button>
-              </div>
-            </form>
+      {/* Modal création/édition modèle */}
+      <Modal
+        open={showCreateModel}
+        onClose={fermerModal}
+        title={editingModel ? 'Modifier le modèle' : 'Nouveau modèle de résumé'}
+      >
+        <form onSubmit={handleSubmitModel} className="space-y-4">
+          <div>
+            <label className="label">Nom *</label>
+            <input
+              autoFocus
+              type="text"
+              value={modelName}
+              onChange={(e) => setModelName(e.target.value)}
+              required
+              placeholder="Ex: Résumé exécutif"
+              className="input"
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="label">Description</label>
+            <input
+              type="text"
+              value={modelDescription}
+              onChange={(e) => setModelDescription(e.target.value)}
+              placeholder="Brève description du modèle"
+              className="input"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Ton</label>
+              <select
+                value={modelTone}
+                onChange={(e) => setModelTone(e.target.value)}
+                className="input"
+              >
+                <option value="professionnel">Professionnel</option>
+                <option value="concis">Concis</option>
+                <option value="détaillé">Détaillé</option>
+                <option value="conversationnel">Conversationnel</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Niveau de détail</label>
+              <select
+                value={modelDetailLevel}
+                onChange={(e) => setModelDetailLevel(Number(e.target.value))}
+                className="input"
+              >
+                {[1, 2, 3, 4, 5].map(n => (
+                  <option key={n} value={n}>{n} / 5</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="label">Sections (séparées par des virgules)</label>
+            <input
+              type="text"
+              value={modelSections}
+              onChange={(e) => setModelSections(e.target.value)}
+              placeholder="Points clés, Décisions, Actions à suivre"
+              className="input"
+            />
+          </div>
+          <div className="flex gap-3 justify-end pt-2">
+            <button type="button" onClick={fermerModal} className="btn btn-ghost">
+              Annuler
+            </button>
+            <button type="submit" disabled={creating || !modelName.trim()} className="btn btn-primary">
+              {creating ? 'Sauvegarde...' : editingModel ? 'Enregistrer' : 'Créer'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

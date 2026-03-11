@@ -114,7 +114,7 @@ export default function Logo({ size = 'md', showText = false, className = '' }: 
       </svg>
 
       {showText && (
-        <span className={`font-bold text-[#09307e] ${text}`}>
+        <span className={`font-bold text-[var(--color-accent-primary)] ${text}`}>
           Memoras
         </span>
       )}

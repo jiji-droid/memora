@@ -15,7 +15,8 @@ const qdrant = require('../services/qdrantService');
 
 /**
  * Configure les routes des espaces
- * Utilise fastify.authenticate (défini dans index.js) pour l'authentification JWT
+ * Utilise fastify.authenticateEither (JWT ou API Key) pour GET (lecture agent 016)
+ * Utilise fastify.authenticate (JWT seul) pour POST/PUT/DELETE (écriture user uniquement)
  */
 async function spacesRoutes(fastify) {
 
@@ -77,9 +78,12 @@ async function spacesRoutes(fastify) {
   });
 
   // ============================================
-  // LISTER SES ESPACES : GET /spaces
+  // LISTER LES ESPACES : GET /spaces
+  // Agent 016 (API Key) : retourne TOUS les espaces
+  // Utilisateur (JWT) : retourne uniquement ses espaces
   // ============================================
-  fastify.get('/spaces', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/spaces', { preHandler: [fastify.authenticateEither] }, async (request, reply) => {
+    const estAgent = request.user.isAgent === true;
     const userId = request.user.userId;
 
     const page = parseInt(request.query.page) || 1;
@@ -87,26 +91,43 @@ async function spacesRoutes(fastify) {
     const offset = (page - 1) * limit;
 
     try {
-      // Compte total
-      const countResult = await db.query(
-        'SELECT COUNT(*) FROM spaces WHERE user_id = $1',
-        [userId]
-      );
+      // Compte total — pas de filtre user_id si agent
+      let countResult;
+      if (estAgent) {
+        countResult = await db.query('SELECT COUNT(*) FROM spaces');
+      } else {
+        countResult = await db.query('SELECT COUNT(*) FROM spaces WHERE user_id = $1', [userId]);
+      }
       const total = parseInt(countResult.rows[0].count);
 
-      // Récupère les espaces avec le nombre de sources
-      const result = await db.query(
-        `SELECT s.id, s.nom, s.description, s.tags, s.external_project_id,
-                s.external_project_source, s.created_at, s.updated_at,
-                COUNT(src.id)::INTEGER AS sources_count
-         FROM spaces s
-         LEFT JOIN sources src ON src.space_id = s.id
-         WHERE s.user_id = $1
-         GROUP BY s.id
-         ORDER BY s.updated_at DESC
-         LIMIT $2 OFFSET $3`,
-        [userId, limit, offset]
-      );
+      // Récupère les espaces avec le nombre de sources — pas de filtre user_id si agent
+      let result;
+      if (estAgent) {
+        result = await db.query(
+          `SELECT s.id, s.nom, s.description, s.tags, s.external_project_id,
+                  s.external_project_source, s.created_at, s.updated_at,
+                  COUNT(src.id)::INTEGER AS sources_count
+           FROM spaces s
+           LEFT JOIN sources src ON src.space_id = s.id
+           GROUP BY s.id
+           ORDER BY s.updated_at DESC
+           LIMIT $1 OFFSET $2`,
+          [limit, offset]
+        );
+      } else {
+        result = await db.query(
+          `SELECT s.id, s.nom, s.description, s.tags, s.external_project_id,
+                  s.external_project_source, s.created_at, s.updated_at,
+                  COUNT(src.id)::INTEGER AS sources_count
+           FROM spaces s
+           LEFT JOIN sources src ON src.space_id = s.id
+           WHERE s.user_id = $1
+           GROUP BY s.id
+           ORDER BY s.updated_at DESC
+           LIMIT $2 OFFSET $3`,
+          [userId, limit, offset]
+        );
+      }
 
       const spaces = result.rows.map(s => ({
         id: s.id,
@@ -144,17 +165,22 @@ async function spacesRoutes(fastify) {
 
   // ============================================
   // VOIR UN ESPACE : GET /spaces/:id
+  // Agent 016 (API Key) : accède à n'importe quel espace
+  // Utilisateur (JWT) : accède uniquement à ses espaces
   // ============================================
-  fastify.get('/spaces/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/spaces/:id', { preHandler: [fastify.authenticateEither] }, async (request, reply) => {
+    const estAgent = request.user.isAgent === true;
     const userId = request.user.userId;
     const spaceId = request.params.id;
 
     try {
-      // Récupère l'espace
-      const spaceResult = await db.query(
-        'SELECT * FROM spaces WHERE id = $1 AND user_id = $2',
-        [spaceId, userId]
-      );
+      // Récupère l'espace — pas de filtre user_id si agent
+      let spaceResult;
+      if (estAgent) {
+        spaceResult = await db.query('SELECT * FROM spaces WHERE id = $1', [spaceId]);
+      } else {
+        spaceResult = await db.query('SELECT * FROM spaces WHERE id = $1 AND user_id = $2', [spaceId, userId]);
+      }
 
       if (spaceResult.rows.length === 0) {
         return reply.status(404).send({

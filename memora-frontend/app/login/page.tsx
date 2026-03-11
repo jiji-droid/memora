@@ -4,9 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { login, isLoggedIn } from '@/lib/api';
+import { useTheme } from '@/components/ThemeProvider';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -34,12 +37,17 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen relative overflow-hidden bg-[var(--color-bg-secondary)]">
 
-      {/* Effets aurora bleu/orange */}
+      {/* Toggle thème — coin supérieur droit */}
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
+
+      {/* Effets aurora bleu/orange — opacité doublée en dark mode */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
           className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(9,48,126,0.12) 0%, transparent 60%)',
+            background: `radial-gradient(circle, rgba(9,48,126,${theme === 'dark' ? 0.24 : 0.12}) 0%, transparent 60%)`,
             filter: 'blur(80px)',
             animation: 'pulse 8s ease-in-out infinite',
           }}
@@ -47,7 +55,7 @@ export default function LoginPage() {
         <div
           className="absolute -bottom-40 -left-40 w-[600px] h-[600px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(245,136,32,0.08) 0%, transparent 60%)',
+            background: `radial-gradient(circle, rgba(245,136,32,${theme === 'dark' ? 0.16 : 0.08}) 0%, transparent 60%)`,
             filter: 'blur(80px)',
             animation: 'pulse 10s ease-in-out infinite reverse',
           }}
@@ -55,7 +63,7 @@ export default function LoginPage() {
         <div
           className="absolute top-1/3 -left-20 w-[400px] h-[400px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(9,48,126,0.06) 0%, transparent 60%)',
+            background: `radial-gradient(circle, rgba(9,48,126,${theme === 'dark' ? 0.12 : 0.06}) 0%, transparent 60%)`,
             filter: 'blur(100px)',
           }}
         />
@@ -88,7 +96,7 @@ export default function LoginPage() {
                   <line x1="40" y1="40" x2="22" y2="58" stroke="#f58820" strokeWidth="1.5" opacity="0.3" />
                   <line x1="40" y1="40" x2="58" y2="58" stroke="#f58820" strokeWidth="1.5" opacity="0.3" />
                 </svg>
-                <span className="text-2xl font-bold text-[#09307e]">Memoras</span>
+                <span className="text-2xl font-bold text-[var(--color-accent-primary)]">Memoras</span>
               </div>
             </Link>
             <h1 className="text-2xl font-bold text-[var(--color-accent-primary)]">

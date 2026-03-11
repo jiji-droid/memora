@@ -29,6 +29,70 @@
   --font-family: 'Poppins', system-ui, -apple-system, sans-serif;
 }
 
+/* ============================================
+   PALETTE GESTIMATECH — THÈME SOMBRE
+   ============================================ */
+
+html.dark {
+  --color-bg-primary: #0d1b2a;
+  --color-bg-secondary: #0a1628;
+  --color-bg-card: rgba(13, 27, 42, 0.75);
+  --color-bg-hover: rgba(17, 85, 168, 0.15);
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+  --color-accent-primary: #5b8fd9;
+  --color-accent-secondary: #f58820;
+  --color-highlight: #f5a623;
+  --color-border: rgba(91, 143, 217, 0.15);
+  --color-border-hover: rgba(91, 143, 217, 0.30);
+}
+
+/* Overrides dark — carte glass */
+html.dark .card-glass {
+  background: rgba(13, 27, 42, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(91, 143, 217, 0.12);
+}
+
+/* Overrides dark — ombres */
+html.dark .shadow-soft {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .shadow-medium {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Overrides dark — scrollbar */
+html.dark ::-webkit-scrollbar-track {
+  background: #0d1b2a;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #2d3f58;
+}
+
+/* Overrides dark — aurora (opacités doublées) */
+html.dark .bg-aurora::before {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(9, 48, 126, 0.16) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(245, 136, 32, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(17, 85, 168, 0.08) 0%, transparent 70%);
+}
+
+/* Overrides dark — classes Tailwind courantes */
+html.dark .bg-memora-bleu-pale {
+  background-color: rgba(91, 143, 217, 0.15);
+}
+
+html.dark .bg-memora-orange-pale {
+  background-color: rgba(245, 136, 32, 0.15);
+}
+
+html.dark .bg-error-50 {
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
 body {
   font-family: var(--font-family);
   background-color: var(--color-bg-secondary);

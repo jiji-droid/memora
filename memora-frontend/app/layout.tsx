@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -23,8 +24,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={poppins.variable} style={{ backgroundColor: '#f0f2f8' }}>
-      <body className={poppins.className} style={{ backgroundColor: '#f0f2f8' }}>{children}</body>
+    <html lang="fr" className={poppins.variable} suppressHydrationWarning>
+      <head>
+        {/* Script anti-flash pour le dark mode */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            var t = localStorage.getItem('memora_theme');
+            if (t === 'dark') document.documentElement.classList.add('dark');
+          })();
+        `}} />
+      </head>
+      <body className={poppins.className}>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

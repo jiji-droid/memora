@@ -14,23 +14,31 @@ const { processerMessage } = require('../services/chatService');
 // Requêtes SQL centralisées (Pattern D)
 // ============================================
 const SQL = {
+  /** Vérifie que la conversation appartient à l'utilisateur (ownership via JOIN) */
   VERIFIER_CONVERSATION: `
     SELECT c.id, c.space_id
     FROM conversations c
     JOIN spaces s ON s.id = c.space_id
-    WHERE c.id = $1 AND s.user_id = $2`
+    WHERE c.id = $1 AND s.user_id = $2`,
+
+  /** Vérifie que la conversation existe (sans filtre user_id — pour l'agent 016) */
+  VERIFIER_CONVERSATION_AGENT: `
+    SELECT c.id, c.space_id
+    FROM conversations c
+    WHERE c.id = $1`
 };
 
 /**
  * Configure la route du chat IA
- * Utilise fastify.authenticate (défini dans index.js) pour l'authentification JWT
+ * Utilise fastify.authenticateEither (JWT ou API Key) pour permettre l'accès à l'agent 016
  */
 async function chatRoutes(fastify) {
 
   // ============================================
   // ENVOYER UN MESSAGE : POST /conversations/:id/chat
   // ============================================
-  fastify.post('/conversations/:id/chat', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post('/conversations/:id/chat', { preHandler: [fastify.authenticateEither] }, async (request, reply) => {
+    const estAgent = request.user.isAgent === true;
     const userId = request.user.userId;
     const conversationId = request.params.id;
     const { message } = request.body || {};
@@ -44,8 +52,13 @@ async function chatRoutes(fastify) {
     }
 
     try {
-      // Vérifie que la conversation existe et appartient à l'utilisateur (Pattern E — ownership via JOIN)
-      const convResult = await db.query(SQL.VERIFIER_CONVERSATION, [conversationId, userId]);
+      // Vérifie que la conversation existe — agent : pas de filtre user_id
+      let convResult;
+      if (estAgent) {
+        convResult = await db.query(SQL.VERIFIER_CONVERSATION_AGENT, [conversationId]);
+      } else {
+        convResult = await db.query(SQL.VERIFIER_CONVERSATION, [conversationId, userId]);
+      }
 
       if (convResult.rows.length === 0) {
         return reply.status(404).send({
