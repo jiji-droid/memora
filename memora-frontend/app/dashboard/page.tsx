@@ -233,7 +233,7 @@ export default function DashboardPage() {
                   <div className="w-10 h-10 rounded-xl bg-memora-bleu-pale flex items-center justify-center text-[var(--color-accent-primary)]">
                     {getSpaceIcon(space.sourcesCount)}
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -362,7 +362,7 @@ export default function DashboardPage() {
                   <span className="text-xs text-[var(--color-text-secondary)] hidden sm:block">
                     {formatDate(space.updatedAt)}
                   </span>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
