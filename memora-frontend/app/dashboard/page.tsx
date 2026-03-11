@@ -11,6 +11,7 @@ import {
   getSpaces, createSpace, deleteSpace, updateSpace,
   isLoggedIn, logout, getProfile,
 } from '@/lib/api';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import type { Space, User } from '@/lib/types';
 
 type ViewMode = 'list' | 'grid';
@@ -31,6 +32,9 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
 
+  // Statut réseau — auto-refresh au retour en ligne
+  const { wasOffline } = useNetworkStatus();
+
   useEffect(() => {
     if (!isLoggedIn()) {
       router.push('/login');
@@ -38,6 +42,11 @@ export default function DashboardPage() {
     }
     chargerDonnees();
   }, [router]);
+
+  // Rafraîchir les données au retour en ligne
+  useEffect(() => {
+    if (wasOffline) chargerDonnees();
+  }, [wasOffline]);
 
   async function chargerDonnees() {
     try {
