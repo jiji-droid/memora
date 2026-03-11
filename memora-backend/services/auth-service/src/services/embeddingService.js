@@ -2,7 +2,7 @@
  * MEMORA — Service d'embeddings (Gemini)
  *
  * Génère des vecteurs d'embedding pour la recherche sémantique.
- * Utilise le modèle text-embedding-004 de Google (768 dimensions, gratuit).
+ * Utilise le modèle gemini-embedding-001 de Google (tronqué à 768 dimensions, gratuit).
  *
  * Fonctions exportées :
  * - genererEmbedding(texte)       → vecteur unique
@@ -12,7 +12,7 @@
 // ============================================
 // Configuration
 // ============================================
-const MODELE_EMBEDDING = 'text-embedding-004';
+const MODELE_EMBEDDING = 'gemini-embedding-001';
 const DIMENSIONS_EMBEDDING = 768;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -51,7 +51,8 @@ async function genererEmbedding(texte) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: `models/${MODELE_EMBEDDING}`,
-          content: { parts: [{ text: texte.trim() }] }
+          content: { parts: [{ text: texte.trim() }] },
+          outputDimensionality: DIMENSIONS_EMBEDDING
         })
       }
     );
@@ -109,7 +110,8 @@ async function genererEmbeddingsBatch(textes) {
         body: JSON.stringify({
           requests: textesNettoyes.map(texte => ({
             model: `models/${MODELE_EMBEDDING}`,
-            content: { parts: [{ text: texte }] }
+            content: { parts: [{ text: texte }] },
+            outputDimensionality: DIMENSIONS_EMBEDDING
           }))
         })
       }
