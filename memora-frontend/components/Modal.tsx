@@ -87,8 +87,8 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
           </button>
         </div>
 
-        {/* Contenu */}
-        <div className="px-6 py-4">
+        {/* Contenu — scrollable sur mobile quand le clavier est ouvert */}
+        <div className="px-6 py-4 overflow-y-auto max-h-[70vh]">
           {children}
         </div>
       </div>

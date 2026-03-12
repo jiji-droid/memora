@@ -891,7 +891,7 @@ export default function SpaceDetailPage() {
               onChange={(e) => setPasteContent(e.target.value)}
               required
               placeholder="Colle ton texte ici..."
-              rows={8}
+              rows={5}
               className="input resize-none"
             />
           </div>
