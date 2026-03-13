@@ -133,7 +133,8 @@ function SearchContent() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Recherche dans tous tes espaces..."
-              className="input pl-12"
+              className="input"
+              style={{ paddingLeft: '3rem' }}
               autoFocus
             />
           </div>
