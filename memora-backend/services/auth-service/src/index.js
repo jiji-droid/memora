@@ -16,6 +16,7 @@ const uploadRoutes = require('./routes/upload');
 const conversationsRoutes = require('./routes/conversations');
 const chatRoutes = require('./routes/chat');
 const searchRoutes = require('./routes/search');
+const pushRoutes = require('./routes/push');
 
 // Configuration
 const PORT = process.env.PORT || 3001;
@@ -96,6 +97,7 @@ fastify.register(conversationsRoutes);
 fastify.register(chatRoutes);
 fastify.register(searchRoutes);
 fastify.register(require('./routes/summary-models'));
+fastify.register(pushRoutes);
 
 // Hook global — alertes Telegram sur erreurs 500
 fastify.addHook('onError', async (request, reply, error) => {
@@ -174,6 +176,11 @@ const start = async () => {
 ║  RECHERCHE SÉMANTIQUE                                         ║
 ║  GET    /spaces/:id/search?q=...   Rechercher dans un espace  ║
 ║  GET    /search?q=...              Rechercher cross-espaces   ║
+║                                                               ║
+║  WEB PUSH                                                    ║
+║  GET    /push/vapid-key            Clé publique VAPID         ║
+║  POST   /push/subscribe            S'abonner aux push         ║
+║  POST   /push/unsubscribe          Se désabonner des push     ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
     `);

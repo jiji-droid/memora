@@ -207,9 +207,38 @@ async function initDatabase() {
     `);
     console.log('✅ Table "audit_logs" prête');
 
+    // ============================================
+    // TABLE: push_subscriptions (souscriptions Web Push)
+    // Stocke les souscriptions push de chaque utilisateur
+    // pour envoyer des notifications serveur → navigateur
+    // ============================================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        endpoint TEXT NOT NULL UNIQUE,
+        keys_p256dh TEXT NOT NULL,
+        keys_auth TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Table "push_subscriptions" prête');
+
+    // ============================================
+    // TABLE: config (configuration clé-valeur)
+    // Stocke les VAPID keys générées au premier démarrage
+    // ============================================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS config (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
+    console.log('✅ Table "config" prête');
+
     console.log('');
     console.log('🎉 Base de données Memora v2 initialisée !');
-    console.log('   Tables : organizations, users, spaces, sources, conversations, messages, summary_models, audit_logs');
+    console.log('   Tables : organizations, users, spaces, sources, conversations, messages, summary_models, audit_logs, push_subscriptions, config');
     console.log('');
 
   } catch (error) {

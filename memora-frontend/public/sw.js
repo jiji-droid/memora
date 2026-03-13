@@ -8,7 +8,7 @@
  * - Notifications : alerte quand une transcription est terminée
  */
 
-const CACHE_NAME = 'memora-v3';
+const CACHE_NAME = 'memora-v4';
 const OFFLINE_URL = '/offline';
 const DB_NAME = 'memora-offline';
 const DB_VERSION = 1;
@@ -363,6 +363,23 @@ self.addEventListener('message', (event) => {
       data: { url: event.data.url || '/dashboard' },
     });
   }
+});
+
+// ============================================
+// WEB PUSH — réception des notifications serveur
+// ============================================
+
+self.addEventListener('push', (event) => {
+  const donnees = event.data ? event.data.json() : {};
+  const titre = donnees.title || 'Memora';
+  const options = {
+    body: donnees.body || 'Nouvelle notification',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    tag: donnees.tag || 'memora-notification',
+    data: { url: donnees.url || '/dashboard' },
+  };
+  event.waitUntil(self.registration.showNotification(titre, options));
 });
 
 // ============================================

@@ -10,6 +10,7 @@ import {
   isLoggedIn, getProfile, logout,
   getSummaryModels, createSummaryModel, updateSummaryModel,
   deleteSummaryModel, setDefaultSummaryModel,
+  getVapidKey, subscribePush, unsubscribePush,
 } from '@/lib/api';
 import type { User, SummaryModel } from '@/lib/types';
 
@@ -29,9 +30,10 @@ export default function SettingsPage() {
   const [creating, setCreating] = useState(false);
   const [editingModel, setEditingModel] = useState<SummaryModel | null>(null);
 
-  // Notifications
+  // Notifications Web Push
   const [notifTranscription, setNotifTranscription] = useState(false);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+  const [notifLoading, setNotifLoading] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -40,11 +42,22 @@ export default function SettingsPage() {
     }
     chargerDonnees();
 
-    // Charger le state des notifications
+    // Charger le state des notifications Web Push
     if (typeof window !== 'undefined') {
-      setNotifTranscription(localStorage.getItem('memora_notif_transcription') === 'true');
       if ('Notification' in window) {
         setNotifPermission(Notification.permission);
+      }
+      // Vérifier si une souscription push existe réellement
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.pushManager.getSubscription().then((sub) => {
+            const estAbonne = !!sub;
+            setNotifTranscription(estAbonne);
+            localStorage.setItem('memora_notif_transcription', estAbonne.toString());
+          });
+        });
+      } else {
+        setNotifTranscription(localStorage.getItem('memora_notif_transcription') === 'true');
       }
     }
   }, [router]);
@@ -138,17 +151,88 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleToggleNotif() {
-    if (notifPermission === 'default') {
-      const permission = await Notification.requestPermission();
-      setNotifPermission(permission);
-      if (permission !== 'granted') return;
+  /**
+   * Convertit une clé VAPID base64url en Uint8Array
+   * (requis par pushManager.subscribe)
+   */
+  function urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
     }
-    if (notifPermission === 'denied') return;
+    return outputArray;
+  }
 
-    const newValue = !notifTranscription;
-    setNotifTranscription(newValue);
-    localStorage.setItem('memora_notif_transcription', newValue.toString());
+  async function handleToggleNotif() {
+    if (notifLoading) return;
+
+    // Si on veut activer
+    if (!notifTranscription) {
+      setNotifLoading(true);
+      try {
+        // 1. Demander la permission si pas encore fait
+        if (notifPermission === 'default') {
+          const permission = await Notification.requestPermission();
+          setNotifPermission(permission);
+          if (permission !== 'granted') return;
+        }
+        if (notifPermission === 'denied') return;
+
+        // 2. Récupérer la clé publique VAPID du serveur
+        const vapidRes = await getVapidKey();
+        const clePublique = vapidRes.data?.publicKey;
+        if (!clePublique) {
+          console.error('Clé VAPID non disponible');
+          return;
+        }
+
+        // 3. S'abonner au push via le Service Worker
+        const registration = await navigator.serviceWorker.ready;
+        const souscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(clePublique) as BufferSource,
+        });
+
+        // 4. Envoyer la souscription au serveur
+        const souscriptionJson = souscription.toJSON();
+        await subscribePush(souscriptionJson);
+
+        // 5. Mettre à jour l'état local
+        setNotifTranscription(true);
+        localStorage.setItem('memora_notif_transcription', 'true');
+      } catch (erreur) {
+        console.error('Erreur activation push:', erreur);
+      } finally {
+        setNotifLoading(false);
+      }
+    } else {
+      // On veut désactiver
+      setNotifLoading(true);
+      try {
+        // 1. Récupérer la souscription existante
+        const registration = await navigator.serviceWorker.ready;
+        const souscription = await registration.pushManager.getSubscription();
+
+        if (souscription) {
+          // 2. Se désabonner côté navigateur
+          await souscription.unsubscribe();
+
+          // 3. Supprimer côté serveur
+          await unsubscribePush(souscription.endpoint);
+        }
+
+        // 4. Mettre à jour l'état local
+        setNotifTranscription(false);
+        localStorage.setItem('memora_notif_transcription', 'false');
+      } catch (erreur) {
+        console.error('Erreur désactivation push:', erreur);
+      } finally {
+        setNotifLoading(false);
+      }
+    }
   }
 
   async function handleDeleteModel(id: number) {
@@ -210,14 +294,16 @@ export default function SettingsPage() {
             </div>
             <button
               onClick={handleToggleNotif}
-              disabled={notifPermission === 'denied'}
+              disabled={notifPermission === 'denied' || notifLoading}
               className={`relative flex-shrink-0 rounded-full transition-colors ${
+                notifLoading ? 'opacity-60 cursor-wait' : ''
+              } ${
                 notifTranscription && notifPermission === 'granted'
                   ? 'bg-[var(--color-accent-secondary)]'
                   : 'bg-[var(--color-border)]'
               }`}
               style={{ width: '44px', height: '24px' }}
-              title={notifTranscription ? 'Désactiver' : 'Activer'}
+              title={notifLoading ? 'En cours...' : notifTranscription ? 'Désactiver' : 'Activer'}
             >
               <div
                 className="absolute rounded-full bg-white shadow-sm transition-transform"

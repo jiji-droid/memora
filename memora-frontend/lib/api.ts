@@ -329,3 +329,25 @@ export async function setDefaultSummaryModel(id: number) {
     method: 'POST',
   });
 }
+
+// ============================================
+// WEB PUSH
+// ============================================
+
+export async function getVapidKey() {
+  return apiRequest<{ publicKey: string }>('/push/vapid-key');
+}
+
+export async function subscribePush(souscription: PushSubscriptionJSON) {
+  return apiRequest<{ message: string }>('/push/subscribe', {
+    method: 'POST',
+    body: JSON.stringify(souscription),
+  });
+}
+
+export async function unsubscribePush(endpoint: string) {
+  return apiRequest<{ message: string }>('/push/unsubscribe', {
+    method: 'POST',
+    body: JSON.stringify({ endpoint }),
+  });
+}

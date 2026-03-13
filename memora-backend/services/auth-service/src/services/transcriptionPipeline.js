@@ -220,6 +220,25 @@ async function lancerTranscription(sourceId, spaceId, fileKey, nomSource) {
       );
     }
 
+    // Étape 10 — Notification push (fin du pipeline complet)
+    try {
+      const pushService = require('./pushService');
+      // Récupérer le user_id via l'espace parent
+      const userResult = await db.query('SELECT user_id FROM spaces WHERE id = $1', [spaceId]);
+      const userId = userResult.rows[0]?.user_id;
+      if (userId) {
+        await pushService.envoyerNotification(userId, {
+          title: 'Memora',
+          body: `Transcription terminée : ${nomSource}`,
+          url: `/spaces/${spaceId}`,
+          tag: `transcription-${sourceId}`
+        });
+      }
+    } catch (errPush) {
+      // La notification push échoue mais le pipeline est terminé — pas critique
+      console.error('[Transcription] Erreur notification push (non critique):', errPush.message);
+    }
+
     const dureePipeline = Date.now() - debutPipeline;
     console.log(`[Transcription] Pipeline source ${sourceId} terminé en ${dureePipeline}ms`);
 
