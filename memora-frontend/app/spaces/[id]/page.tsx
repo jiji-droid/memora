@@ -9,6 +9,8 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import Modal from '@/components/Modal';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import ConfirmModal from '@/components/ConfirmModal';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useOfflineRecordings } from '@/hooks/useOfflineRecordings';
 import {
   getSpace, getSource, deleteSource, uploadFile, createSource, updateSource,
   getConversations, createConversation, deleteConversation, renameConversation,
@@ -24,6 +26,10 @@ export default function SpaceDetailPage() {
   const router = useRouter();
   const params = useParams();
   const spaceId = Number(params.id);
+
+  // Réseau + offline
+  const { isOnline } = useNetworkStatus();
+  const { recordings: offlineRecordings, saveRecording: saveOfflineRecording, syncAll, syncing, deleteRecording: deleteOfflineRec, getAudioUrl, hasPending } = useOfflineRecordings(spaceId);
 
   // --- États existants ---
   const [space, setSpace] = useState<Space | null>(null);
@@ -153,14 +159,25 @@ export default function SpaceDetailPage() {
     }
   }
 
-  // Upload d'une note vocale enregistrée
+  // Upload d'une note vocale enregistrée (ou sauvegarde offline)
   async function handleVoiceRecordingComplete(blob: Blob, duration: number, nom: string) {
     setShowVoiceRecorder(false);
     setShowAddSource(false);
+
+    // Si pas de réseau → sauvegarder en offline
+    if (!isOnline) {
+      try {
+        await saveOfflineRecording(blob, nom, duration);
+        setUploadProgress(null);
+      } catch (err) {
+        console.error('Erreur sauvegarde offline:', err);
+      }
+      return;
+    }
+
     setUploadProgress('Upload en cours...');
 
     try {
-      // Convertir le Blob en File pour l'upload
       const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';
       const file = new File([blob], `${nom}.${extension}`, { type: blob.type });
 
@@ -168,12 +185,16 @@ export default function SpaceDetailPage() {
       if (res.data?.source) {
         setSources((prev) => [res.data!.source, ...prev]);
         setUploadProgress('Transcription en cours...');
-
-        // Polling automatique du statut de transcription
         pollTranscriptionStatus(res.data.source.id);
       }
     } catch (err) {
       console.error('Erreur upload note vocale:', err);
+      // Si l'upload échoue (réseau coupé pendant l'envoi) → sauvegarder en offline
+      try {
+        await saveOfflineRecording(blob, nom, duration);
+      } catch {
+        // Ignorer si IndexedDB échoue aussi
+      }
       setUploadProgress(null);
     }
   }
@@ -195,6 +216,20 @@ export default function SpaceDetailPage() {
             setSources((prev) =>
               prev.map((s) => s.id === sourceId ? sourceRes.data!.source : s)
             );
+
+            // Notification push si activée et transcription réussie
+            if (status === 'done' && 'serviceWorker' in navigator && Notification.permission === 'granted') {
+              const notifEnabled = localStorage.getItem('memora_notif_transcription') === 'true';
+              if (notifEnabled) {
+                navigator.serviceWorker.ready.then((reg) => {
+                  reg.active?.postMessage({
+                    type: 'TRANSCRIPTION_DONE',
+                    nom: sourceRes.data!.source.nom,
+                    url: `/spaces/${spaceId}`,
+                  });
+                });
+              }
+            }
           }
         }
       } catch {
@@ -522,6 +557,75 @@ export default function SpaceDetailPage() {
           <p className="text-sm font-medium text-[var(--color-accent-secondary)]">
             {uploadProgress}
           </p>
+        </div>
+      )}
+
+      {/* Enregistrements offline en attente */}
+      {offlineRecordings.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-[var(--color-accent-secondary)]">
+              {offlineRecordings.length} note{offlineRecordings.length > 1 ? 's' : ''} en attente
+            </span>
+            {isOnline && hasPending && (
+              <button
+                onClick={syncAll}
+                disabled={syncing}
+                className="btn btn-primary btn-sm text-xs py-1 px-2"
+              >
+                {syncing ? 'Sync...' : 'Envoyer tout'}
+              </button>
+            )}
+          </div>
+          <div className="space-y-2">
+            {offlineRecordings.map((rec) => (
+              <div key={rec.id} className="card p-3 border-l-3" style={{ borderLeftColor: 'var(--color-accent-secondary)', borderLeftWidth: '3px' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-memora-orange-pale flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-[var(--color-accent-secondary)]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium text-[var(--color-text-primary)] truncate">{rec.nom}</h4>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="badge badge-highlight text-[10px]">
+                        {rec.status === 'pending' ? 'En attente' : rec.status === 'uploading' ? 'Upload...' : 'Erreur'}
+                      </span>
+                      <span className="text-[10px] text-[var(--color-text-secondary)]">
+                        {Math.floor(rec.duration / 60)}:{(rec.duration % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Réécouter */}
+                  <button
+                    onClick={() => {
+                      const url = getAudioUrl(rec);
+                      const audio = new Audio(url);
+                      audio.play();
+                    }}
+                    className="p-1.5 rounded hover:bg-[var(--color-bg-hover)] transition-colors flex-shrink-0"
+                    title="Réécouter"
+                  >
+                    <svg className="w-4 h-4 text-[var(--color-accent-primary)]" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </button>
+                  {/* Supprimer */}
+                  <button
+                    onClick={() => deleteOfflineRec(rec.id)}
+                    className="p-1.5 rounded hover:bg-error-50 text-[var(--color-text-secondary)] hover:text-red-500 transition-colors flex-shrink-0"
+                    title="Supprimer"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

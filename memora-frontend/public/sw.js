@@ -7,10 +7,12 @@
  * - API GET : Network-first → cache
  * - Autres (images, fonts) : Cache-first → réseau
  *
- * Les requêtes POST/PUT/DELETE ne sont PAS interceptées.
+ * Fonctionnalités ajoutées :
+ * - Background Sync : file d'attente pour les uploads en arrière-plan
+ * - Notifications : alerte quand une transcription est terminée
  */
 
-const CACHE_NAME = 'memora-v1';
+const CACHE_NAME = 'memora-v2';
 const OFFLINE_URL = '/offline';
 
 // Ressources à précacher lors de l'installation
@@ -138,4 +140,38 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+
+  // Notification de transcription terminée
+  if (event.data && event.data.type === 'TRANSCRIPTION_DONE') {
+    const { nom } = event.data;
+    self.registration.showNotification('Memora', {
+      body: `Transcription terminée : ${nom}`,
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      tag: 'transcription-done',
+      data: { url: event.data.url || '/dashboard' },
+    });
+  }
+});
+
+// ----- NOTIFICATION CLICK -----
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const urlCible = event.notification.data?.url || '/dashboard';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clients) => {
+        // Si un onglet Memora est déjà ouvert, on le focus
+        for (const client of clients) {
+          if (client.url.includes('memoras.ai') || client.url.includes('localhost:3000')) {
+            client.navigate(urlCible);
+            return client.focus();
+          }
+        }
+        // Sinon, on ouvre un nouvel onglet
+        return self.clients.openWindow(urlCible);
+      })
+  );
 });

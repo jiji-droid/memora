@@ -29,12 +29,24 @@ export default function SettingsPage() {
   const [creating, setCreating] = useState(false);
   const [editingModel, setEditingModel] = useState<SummaryModel | null>(null);
 
+  // Notifications
+  const [notifTranscription, setNotifTranscription] = useState(false);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+
   useEffect(() => {
     if (!isLoggedIn()) {
       router.push('/login');
       return;
     }
     chargerDonnees();
+
+    // Charger le state des notifications
+    if (typeof window !== 'undefined') {
+      setNotifTranscription(localStorage.getItem('memora_notif_transcription') === 'true');
+      if ('Notification' in window) {
+        setNotifPermission(Notification.permission);
+      }
+    }
   }, [router]);
 
   async function chargerDonnees() {
@@ -126,6 +138,19 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleToggleNotif() {
+    if (notifPermission === 'default') {
+      const permission = await Notification.requestPermission();
+      setNotifPermission(permission);
+      if (permission !== 'granted') return;
+    }
+    if (notifPermission === 'denied') return;
+
+    const newValue = !notifTranscription;
+    setNotifTranscription(newValue);
+    localStorage.setItem('memora_notif_transcription', newValue.toString());
+  }
+
   async function handleDeleteModel(id: number) {
     try {
       await deleteSummaryModel(id);
@@ -165,6 +190,43 @@ export default function SettingsPage() {
               <span className="label">Email</span>
               <p className="text-[var(--color-text-primary)]">{user?.email || '—'}</p>
             </div>
+          </div>
+        </section>
+
+        {/* Notifications */}
+        <section className="card p-6 mb-8">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Notifications</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-[var(--color-text-primary)]">Transcription terminée</p>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                Recevoir une notification quand une transcription audio est complétée.
+              </p>
+              {notifPermission === 'denied' && (
+                <p className="text-xs text-red-500 mt-1">
+                  Les notifications sont bloquées dans ton navigateur. Active-les dans les paramètres du site.
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleToggleNotif}
+              disabled={notifPermission === 'denied'}
+              className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${
+                notifTranscription && notifPermission === 'granted'
+                  ? 'bg-[var(--color-accent-secondary)]'
+                  : 'bg-[var(--color-border)]'
+              }`}
+              title={notifTranscription ? 'Désactiver' : 'Activer'}
+            >
+              <div
+                className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
+                  notifTranscription && notifPermission === 'granted' ? 'translate-x-5.5' : 'translate-x-0.5'
+                }`}
+                style={{
+                  transform: notifTranscription && notifPermission === 'granted' ? 'translateX(22px)' : 'translateX(2px)',
+                }}
+              />
+            </button>
           </div>
         </section>
 
