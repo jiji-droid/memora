@@ -15,8 +15,9 @@
  * Appelé en asynchrone (setImmediate) depuis la route upload.
  * IMPORTANT : Ce pipeline ne doit JAMAIS faire crasher l'API.
  *
- * Fonction exportée :
+ * Fonctions exportées :
  * - lancerTranscription(sourceId, spaceId, fileKey, nomSource)
+ * - genererResume(sourceId, contenu, typeSource) — résumé + points d'action
  */
 
 const Anthropic = require('@anthropic-ai/sdk');
@@ -288,6 +289,71 @@ function extraireLocuteurs(resultatDeepgram) {
   }
 }
 
+/**
+ * Génère un résumé + points d'action pour une source à partir de son contenu.
+ * Utilisable indépendamment du pipeline de transcription (ex: après modification manuelle).
+ *
+ * @param {number} sourceId - ID de la source
+ * @param {string} contenu - Le contenu texte à résumer
+ * @param {string} typeSource - 'voice_note' ou 'meeting'
+ * @returns {Promise<{ resume: string|null, pointsAction: string[] }>}
+ */
+async function genererResume(sourceId, contenu, typeSource) {
+  let resume = null;
+  let pointsAction = [];
+
+  // Résumé
+  try {
+    let promptResume;
+    if (typeSource === 'meeting') {
+      promptResume = "Résume cette réunion en français avec : 1) Contexte, 2) Points principaux discutés, 3) Décisions prises. Sois structuré et concis.";
+    } else {
+      promptResume = "Résume cette note vocale en français en quelques points clés. Sois concis et direct.";
+    }
+
+    const client = getClientAnthropic();
+    const reponseResume = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: `${promptResume}\n\nTexte à résumer :\n${contenu}` }]
+    });
+
+    resume = reponseResume.content[0]?.text || null;
+    if (resume) {
+      await db.query(SQL.MAJ_RESUME, [resume, sourceId]);
+      console.log(`[Résumé] Source ${sourceId} : résumé généré (${resume.length} caractères)`);
+    }
+  } catch (erreur) {
+    console.error(`[Résumé] Source ${sourceId} : erreur génération résumé :`, erreur.message);
+  }
+
+  // Points d'action
+  try {
+    const promptActions = "Extrais les points d'action concrets de ce texte. Retourne UNIQUEMENT un tableau JSON de strings, chaque string étant une action concrète. S'il n'y a aucun point d'action, retourne un tableau vide []. Pas de texte avant ou après le JSON.";
+
+    const client = getClientAnthropic();
+    const reponseActions = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: `${promptActions}\n\nTexte :\n${contenu}` }]
+    });
+
+    const texteActions = reponseActions.content[0]?.text;
+    if (texteActions) {
+      pointsAction = JSON.parse(texteActions);
+      if (Array.isArray(pointsAction) && pointsAction.length > 0) {
+        await db.query(SQL.MAJ_POINTS_ACTION, [JSON.stringify(pointsAction), sourceId]);
+        console.log(`[Résumé] Source ${sourceId} : ${pointsAction.length} point(s) d'action`);
+      }
+    }
+  } catch (erreur) {
+    console.error(`[Résumé] Source ${sourceId} : erreur points d'action :`, erreur.message);
+  }
+
+  return { resume, pointsAction };
+}
+
 module.exports = {
-  lancerTranscription
+  lancerTranscription,
+  genererResume
 };

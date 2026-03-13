@@ -15,6 +15,7 @@ const db = require('../db');
 const indexation = require('../services/indexationService');
 const qdrant = require('../services/qdrantService');
 const r2 = require('../services/r2Service');
+const { genererResume } = require('../services/transcriptionPipeline');
 
 /**
  * Vérifie que l'espace appartient à l'utilisateur
@@ -400,6 +401,48 @@ async function sourcesRoutes(fastify) {
         success: false,
         error: 'Erreur serveur'
       });
+    }
+  });
+
+  // ============================================
+  // REGÉNÉRER LE RÉSUMÉ : POST /sources/:id/regenerate-summary
+  // ============================================
+  fastify.post('/sources/:id/regenerate-summary', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = request.user.userId;
+    const sourceId = request.params.id;
+
+    try {
+      // Récupérer la source avec vérification ownership
+      const result = await db.query(
+        `SELECT src.id, src.type, src.content
+         FROM sources src
+         JOIN spaces s ON s.id = src.space_id
+         WHERE src.id = $1 AND s.user_id = $2`,
+        [sourceId, userId]
+      );
+
+      if (result.rows.length === 0) {
+        return reply.status(404).send({ success: false, error: 'Source non trouvée' });
+      }
+
+      const src = result.rows[0];
+
+      if (!src.content || src.content.trim().length === 0) {
+        return reply.status(400).send({ success: false, error: 'La source n\'a pas de contenu à résumer' });
+      }
+
+      // Générer le résumé + points d'action de façon asynchrone
+      const { resume, pointsAction } = await genererResume(src.id, src.content, src.type);
+
+      return reply.send({
+        success: true,
+        message: 'Résumé regénéré',
+        data: { summary: resume, actionPoints: pointsAction }
+      });
+
+    } catch (error) {
+      request.log.error(error, 'Erreur regénération résumé');
+      return reply.status(500).send({ success: false, error: 'Erreur serveur' });
     }
   });
 

@@ -205,6 +205,12 @@ export async function deleteSource(id: number) {
   });
 }
 
+export async function regenerateSummary(id: number) {
+  return apiRequest<{ summary: string | null; actionPoints: string[] }>(`/sources/${id}/regenerate-summary`, {
+    method: 'POST',
+  });
+}
+
 export async function getSourceStatus(id: number) {
   return apiRequest<{ id: number; transcriptionStatus: string; updatedAt: string }>(
     `/sources/${id}/status`
