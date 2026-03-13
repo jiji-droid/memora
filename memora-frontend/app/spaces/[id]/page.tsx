@@ -30,7 +30,12 @@ export default function SpaceDetailPage() {
 
   // Réseau + offline
   const { isOnline } = useNetworkStatus();
-  const { recordings: offlineRecordings, saveRecording: saveOfflineRecording, syncAll, syncing, deleteRecording: deleteOfflineRec, getAudioUrl, hasPending } = useOfflineRecordings(spaceId);
+  const { recordings: offlineRecordings, saveRecording: saveOfflineRecording, syncAll, syncing, deleteRecording: deleteOfflineRec, getAudioUrl, hasPending } = useOfflineRecordings(spaceId, {
+    onSyncSuccess: () => {
+      // Recharger les sources après un sync offline réussi
+      chargerDonnees();
+    },
+  });
 
   // --- États existants ---
   const [space, setSpace] = useState<Space | null>(null);

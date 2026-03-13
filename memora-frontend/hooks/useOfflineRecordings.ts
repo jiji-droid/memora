@@ -34,12 +34,17 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+interface UseOfflineRecordingsOptions {
+  /** Callback appelé après chaque sync réussie (pour recharger les sources) */
+  onSyncSuccess?: () => void;
+}
+
 /**
  * Hook pour gérer les enregistrements vocaux offline.
  * Stocke les blobs audio dans IndexedDB, permet la réécoute,
  * et synchronise automatiquement quand le réseau revient.
  */
-export function useOfflineRecordings(spaceId: number) {
+export function useOfflineRecordings(spaceId: number, options: UseOfflineRecordingsOptions = {}) {
   const [recordings, setRecordings] = useState<OfflineRecording[]>([]);
   const [syncing, setSyncing] = useState(false);
 
@@ -192,13 +197,20 @@ export function useOfflineRecordings(spaceId: number) {
       return;
     }
 
+    let auMoinsUnSucces = false;
     for (const rec of pendingRecordings) {
-      await uploadRecording(rec, token, apiUrl);
+      const ok = await uploadRecording(rec, token, apiUrl);
+      if (ok) auMoinsUnSucces = true;
     }
 
     await loadRecordings();
     setSyncing(false);
-  }, [recordings, syncing]);
+
+    // Notifier le parent pour qu'il recharge les sources
+    if (auMoinsUnSucces && options.onSyncSuccess) {
+      options.onSyncSuccess();
+    }
+  }, [recordings, syncing, options]);
 
   // Supprimer un enregistrement offline
   const deleteRecording = useCallback(async (id: string) => {
