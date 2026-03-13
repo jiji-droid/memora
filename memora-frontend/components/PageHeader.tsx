@@ -34,7 +34,7 @@ export default function PageHeader({
       }}
     >
       {/* Partie gauche — navigation + titre ou logo */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 flex-shrink overflow-hidden">
         {backHref && (
           <a
             href={backHref}
@@ -69,7 +69,10 @@ export default function PageHeader({
             )}
           </div>
         ) : (
-          <Logo size="md" showText />
+          <>
+            <Logo size="md" showText={false} className="sm:hidden" />
+            <Logo size="md" showText className="hidden sm:flex" />
+          </>
         )}
       </div>
 
