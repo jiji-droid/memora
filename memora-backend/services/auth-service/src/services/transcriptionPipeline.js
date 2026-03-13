@@ -200,8 +200,10 @@ async function lancerTranscription(sourceId, spaceId, fileKey, nomSource) {
         }]
       });
 
-      const texteActions = reponseActions.content[0]?.text;
+      let texteActions = reponseActions.content[0]?.text;
       if (texteActions) {
+        // Nettoyer les blocs markdown ```json ... ``` que Claude ajoute parfois
+        texteActions = texteActions.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
         const pointsAction = JSON.parse(texteActions);
         if (Array.isArray(pointsAction) && pointsAction.length > 0) {
           await db.query(SQL.MAJ_POINTS_ACTION, [JSON.stringify(pointsAction), sourceId]);
@@ -338,8 +340,10 @@ async function genererResume(sourceId, contenu, typeSource) {
       messages: [{ role: 'user', content: `${promptActions}\n\nTexte :\n${contenu}` }]
     });
 
-    const texteActions = reponseActions.content[0]?.text;
+    let texteActions = reponseActions.content[0]?.text;
     if (texteActions) {
+      // Nettoyer les blocs markdown ```json ... ```
+      texteActions = texteActions.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
       pointsAction = JSON.parse(texteActions);
       if (Array.isArray(pointsAction) && pointsAction.length > 0) {
         await db.query(SQL.MAJ_POINTS_ACTION, [JSON.stringify(pointsAction), sourceId]);
