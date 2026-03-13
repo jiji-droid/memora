@@ -10,6 +10,10 @@ export interface OfflineRecording {
   duration: number;
   createdAt: string;
   status: 'pending' | 'uploading' | 'done' | 'error';
+  // Stockés pour que le Service Worker puisse uploader sans l'app
+  token: string | null;
+  apiUrl: string;
+  notifEnabled: boolean;
 }
 
 const DB_NAME = 'memora-offline';
@@ -52,8 +56,9 @@ async function chargerDepuisDB(filtreSpaceId: number): Promise<OfflineRecording[
 
 // Upload un enregistrement vers l'API
 async function envoyerEnregistrement(rec: OfflineRecording): Promise<boolean> {
-  const token = localStorage.getItem('memora_token');
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  // Utiliser le token stocké dans l'enregistrement, sinon localStorage
+  const token = rec.token || localStorage.getItem('memora_token');
+  const apiUrl = rec.apiUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   if (!token) return false;
 
@@ -101,14 +106,33 @@ export function useOfflineRecordings(spaceId: number, options: UseOfflineRecordi
     chargerDepuisDB(spaceId).then(setRecordings);
   }, [spaceId]);
 
-  // Sync automatique quand le réseau revient
+  // Sync automatique quand le réseau revient (fallback si Background Sync pas supporté)
   useEffect(() => {
     function handleOnline() {
-      // Petit délai pour laisser le réseau se stabiliser
       setTimeout(() => doSync(), 2000);
     }
     window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
+
+    // Écouter le message SYNC_COMPLETE du Service Worker
+    function handleSWMessage(event: MessageEvent) {
+      if (event.data?.type === 'SYNC_COMPLETE') {
+        // Le SW a terminé le sync — recharger les données
+        chargerDepuisDB(spaceId).then(setRecordings);
+        if (optionsRef.current.onSyncSuccess) {
+          optionsRef.current.onSyncSuccess();
+        }
+      }
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleSWMessage);
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+      }
+    };
   }, [spaceId]);
 
   // Fonction de sync qui lit directement IndexedDB (pas de closure stale)
@@ -163,6 +187,10 @@ export function useOfflineRecordings(spaceId: number, options: UseOfflineRecordi
 
   const saveRecording = useCallback(async (blob: Blob, nom: string, duration: number): Promise<string> => {
     const id = `rec_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const token = localStorage.getItem('memora_token');
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const notifEnabled = localStorage.getItem('memora_notif_transcription') === 'true';
+
     const recording: OfflineRecording = {
       id,
       blob,
@@ -171,6 +199,9 @@ export function useOfflineRecordings(spaceId: number, options: UseOfflineRecordi
       duration,
       createdAt: new Date().toISOString(),
       status: 'pending',
+      token,
+      apiUrl,
+      notifEnabled,
     };
 
     const db = await openDB();
@@ -182,6 +213,18 @@ export function useOfflineRecordings(spaceId: number, options: UseOfflineRecordi
     });
 
     setRecordings((prev) => [recording, ...prev]);
+
+    // Demander au Service Worker de sync quand le réseau revient
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        await (reg as unknown as { sync: { register: (tag: string) => Promise<void> } }).sync.register('sync-recordings');
+        console.log('[Offline] Background Sync enregistré');
+      } catch {
+        console.warn('[Offline] Background Sync non supporté');
+      }
+    }
+
     return id;
   }, [spaceId]);
 
