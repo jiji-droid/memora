@@ -63,6 +63,7 @@ export interface SourceInput {
 
 export interface Conversation {
   id: number;
+  titre: string | null;
   firstMessage: string | null;
   messageCount: number;
   createdAt: string;
@@ -95,6 +96,13 @@ export interface SearchResult {
   score: number;
   sourceCreatedAt: string;
   sourceUpdatedAt: string;
+}
+
+// === RECHERCHE GLOBALE ===
+
+export interface EspaceSearchResult {
+  espace: { id: number; nom: string };
+  resultats: SearchResult[];
 }
 
 // === UTILISATEUR ===

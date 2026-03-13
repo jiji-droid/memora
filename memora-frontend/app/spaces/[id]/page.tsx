@@ -8,9 +8,11 @@ import LoadingScreen from '@/components/LoadingScreen';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Modal from '@/components/Modal';
 import VoiceRecorder from '@/components/VoiceRecorder';
+import ConfirmModal from '@/components/ConfirmModal';
 import {
   getSpace, getSource, deleteSource, uploadFile, createSource, updateSource,
-  getConversations, createConversation, getMessages, sendChatMessage,
+  getConversations, createConversation, deleteConversation, renameConversation,
+  getMessages, sendChatMessage,
   getSourceStatus, isLoggedIn, logout, getProfile,
 } from '@/lib/api';
 import { exportSourcePDF } from '@/lib/export';
@@ -57,6 +59,11 @@ export default function SpaceDetailPage() {
   const [editContent, setEditContent] = useState('');
   const [editNom, setEditNom] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Gestion conversations (renommer, supprimer)
+  const [renamingConvId, setRenamingConvId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [deletingConvId, setDeletingConvId] = useState<number | null>(null);
 
   // --- Nouveaux états : layout 3 panneaux ---
   const [sourcesPanelOpen, setSourcesPanelOpen] = useState(true);
@@ -327,6 +334,42 @@ export default function SpaceDetailPage() {
     } catch (err) {
       console.error('Erreur chargement messages:', err);
     }
+  }
+
+  async function handleRenameConversation(convId: number, titre: string) {
+    if (!titre.trim()) return;
+    try {
+      await renameConversation(convId, titre.trim());
+      setConversations((prev) =>
+        prev.map((c) => c.id === convId ? { ...c, titre: titre.trim() } : c)
+      );
+      if (activeConversation?.id === convId) {
+        setActiveConversation({ ...activeConversation, titre: titre.trim() });
+      }
+      setRenamingConvId(null);
+    } catch (err) {
+      console.error('Erreur renommer conversation:', err);
+    }
+  }
+
+  async function handleDeleteConversation(convId: number) {
+    try {
+      await deleteConversation(convId);
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      if (activeConversation?.id === convId) {
+        setActiveConversation(null);
+        setMessages([]);
+      }
+      setDeletingConvId(null);
+    } catch (err) {
+      console.error('Erreur suppression conversation:', err);
+    }
+  }
+
+  function getConversationLabel(conv: Conversation, index: number) {
+    if (conv.titre) return conv.titre;
+    if (conv.firstMessage) return conv.firstMessage.substring(0, 40) + (conv.firstMessage.length > 40 ? '...' : '');
+    return `Conversation ${conversations.length - index}`;
   }
 
   function deconnexion() {
@@ -727,6 +770,32 @@ export default function SpaceDetailPage() {
               </div>
             )}
 
+            {/* Points d'action (si présents dans metadata) */}
+            {selectedSource.metadata && Array.isArray((selectedSource.metadata as Record<string, unknown>).actionPoints) && ((selectedSource.metadata as Record<string, unknown>).actionPoints as string[]).length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+                  Points d&apos;action
+                </h3>
+                <div
+                  className="p-4 rounded-lg"
+                  style={{
+                    backgroundColor: 'var(--color-bg-hover)',
+                    border: '1px solid var(--color-accent-secondary)',
+                    borderLeftWidth: '3px',
+                  }}
+                >
+                  <ul className="space-y-2">
+                    {((selectedSource.metadata as Record<string, unknown>).actionPoints as string[]).map((action, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="text-[var(--color-accent-secondary)] mt-0.5 flex-shrink-0">&#9679;</span>
+                        <span className="text-[var(--color-text-primary)]">{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             {/* Métadonnées */}
             <div>
               <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
@@ -803,14 +872,41 @@ export default function SpaceDetailPage() {
                 const conv = conversations.find(c => c.id === Number(e.target.value));
                 if (conv) handleSwitchConversation(conv);
               }}
-              className="input text-xs py-1 px-2 max-w-[140px]"
+              className="input text-xs py-1 px-2 max-w-[160px]"
             >
               {conversations.map((c, i) => (
                 <option key={c.id} value={c.id}>
-                  Conv. {conversations.length - i}
+                  {getConversationLabel(c, i)}
                 </option>
               ))}
             </select>
+          )}
+          {/* Renommer la conversation active */}
+          {activeConversation && (
+            <button
+              onClick={() => {
+                setRenamingConvId(activeConversation.id);
+                setRenameValue(activeConversation.titre || '');
+              }}
+              className="btn btn-ghost btn-sm p-1"
+              title="Renommer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+          )}
+          {/* Supprimer la conversation active */}
+          {activeConversation && conversations.length > 0 && (
+            <button
+              onClick={() => setDeletingConvId(activeConversation.id)}
+              className="btn btn-ghost btn-sm p-1 text-[var(--color-text-secondary)] hover:text-red-500"
+              title="Supprimer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
           )}
           <button onClick={handleNewConversation} className="btn btn-outline btn-sm text-xs">
             + Nouvelle
@@ -1050,6 +1146,39 @@ export default function SpaceDetailPage() {
           {mobileTab === 'chat' && chatPanel}
         </div>
       </div>
+
+      {/* Modale renommer conversation */}
+      <Modal
+        open={renamingConvId !== null}
+        onClose={() => setRenamingConvId(null)}
+        title="Renommer la conversation"
+      >
+        <form onSubmit={(e) => { e.preventDefault(); if (renamingConvId) handleRenameConversation(renamingConvId, renameValue); }} className="space-y-4">
+          <input
+            autoFocus
+            type="text"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            placeholder="Nom de la conversation"
+            className="input"
+          />
+          <div className="flex gap-3 justify-end">
+            <button type="button" onClick={() => setRenamingConvId(null)} className="btn btn-ghost">Annuler</button>
+            <button type="submit" disabled={!renameValue.trim()} className="btn btn-primary">Renommer</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modale supprimer conversation */}
+      <ConfirmModal
+        open={deletingConvId !== null}
+        onClose={() => setDeletingConvId(null)}
+        onConfirm={() => { if (deletingConvId) handleDeleteConversation(deletingConvId); }}
+        title="Supprimer la conversation"
+        message="Cette conversation et tous ses messages seront supprimés. Cette action est irréversible."
+        confirmLabel="Supprimer"
+        variant="danger"
+      />
 
       {/* Modale coller texte */}
       <Modal

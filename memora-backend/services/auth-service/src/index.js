@@ -173,6 +173,7 @@ const start = async () => {
 ║                                                               ║
 ║  RECHERCHE SÉMANTIQUE                                         ║
 ║  GET    /spaces/:id/search?q=...   Rechercher dans un espace  ║
+║  GET    /search?q=...              Rechercher cross-espaces   ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
     `);

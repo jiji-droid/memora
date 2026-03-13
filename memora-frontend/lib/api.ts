@@ -7,7 +7,7 @@
 
 import type {
   Space, SpaceInput, Source, SourceInput,
-  Conversation, Message, SearchResult,
+  Conversation, Message, SearchResult, EspaceSearchResult,
   SummaryModel, User, ApiResponse, Pagination,
 } from './types';
 
@@ -252,6 +252,13 @@ export async function deleteConversation(id: number) {
   });
 }
 
+export async function renameConversation(id: number, titre: string) {
+  return apiRequest<{ conversation: Conversation }>(`/conversations/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ titre }),
+  });
+}
+
 // ============================================
 // CHAT IA
 // ============================================
@@ -270,6 +277,12 @@ export async function sendChatMessage(conversationId: number, message: string) {
 export async function searchInSpace(spaceId: number, query: string, limit = 10) {
   return apiRequest<{ results: SearchResult[]; total: number; query: string }>(
     `/spaces/${spaceId}/search?q=${encodeURIComponent(query)}&limit=${limit}`
+  );
+}
+
+export async function searchGlobal(query: string, limit = 20) {
+  return apiRequest<{ query: string; resultatsParEspace: EspaceSearchResult[]; totalResultats: number }>(
+    `/search?q=${encodeURIComponent(query)}&limit=${limit}`
   );
 }
 

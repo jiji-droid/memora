@@ -9,6 +9,8 @@
  * 5. Extraire la durée et les locuteurs
  * 6. Sauvegarder en DB
  * 7. Indexer dans Qdrant
+ * 8. Générer un résumé automatique (Claude)
+ * 9. Extraire les points d'action (Claude)
  *
  * Appelé en asynchrone (setImmediate) depuis la route upload.
  * IMPORTANT : Ce pipeline ne doit JAMAIS faire crasher l'API.
@@ -17,10 +19,27 @@
  * - lancerTranscription(sourceId, spaceId, fileKey, nomSource)
  */
 
+const Anthropic = require('@anthropic-ai/sdk');
 const db = require('../db');
 const deepgram = require('./deepgramService');
 const r2 = require('./r2Service');
 const indexation = require('./indexationService');
+
+// ============================================
+// Client Anthropic (singleton)
+// ============================================
+let clientAnthropic = null;
+
+function getClientAnthropic() {
+  if (!clientAnthropic) {
+    const cleApi = process.env.ANTHROPIC_API_KEY;
+    if (!cleApi) {
+      throw new Error('ANTHROPIC_API_KEY non configurée dans .env');
+    }
+    clientAnthropic = new Anthropic({ apiKey: cleApi });
+  }
+  return clientAnthropic;
+}
 
 // ============================================
 // Requêtes SQL centralisées (Pattern D)
@@ -45,6 +64,20 @@ const SQL = {
     UPDATE sources
     SET transcription_status = 'error', updated_at = CURRENT_TIMESTAMP
     WHERE id = $1
+  `,
+  RECUPERER_TYPE_SOURCE: `
+    SELECT type FROM sources WHERE id = $1
+  `,
+  MAJ_RESUME: `
+    UPDATE sources
+    SET summary = $1, summary_model = 'claude-sonnet-4', updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2
+  `,
+  MAJ_POINTS_ACTION: `
+    UPDATE sources
+    SET metadata = jsonb_set(COALESCE(metadata, '{}'), '{actionPoints}', $1::jsonb),
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2
   `
 };
 
@@ -113,6 +146,74 @@ async function lancerTranscription(sourceId, spaceId, fileKey, nomSource) {
       console.error(
         `[Transcription] Source ${sourceId} : erreur indexation Qdrant (non critique) :`,
         erreurIndexation.message
+      );
+    }
+
+    // Étape 8 — Générer un résumé automatique (Claude)
+    try {
+      // Récupérer le type de la source pour adapter le prompt
+      const typeResult = await db.query(SQL.RECUPERER_TYPE_SOURCE, [sourceId]);
+      const typeSource = typeResult.rows[0]?.type || 'voice_note';
+
+      let promptResume;
+      if (typeSource === 'meeting') {
+        promptResume = "Résume cette réunion en français avec : 1) Contexte, 2) Points principaux discutés, 3) Décisions prises. Sois structuré et concis.";
+      } else {
+        promptResume = "Résume cette note vocale en français en quelques points clés. Sois concis et direct.";
+      }
+
+      const client = getClientAnthropic();
+      const reponseResume = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: `${promptResume}\n\nTexte à résumer :\n${texteTranscrit}`
+        }]
+      });
+
+      const resumeGenere = reponseResume.content[0]?.text;
+      if (resumeGenere) {
+        await db.query(SQL.MAJ_RESUME, [resumeGenere, sourceId]);
+        console.log(`[Transcription] Source ${sourceId} : résumé généré (${resumeGenere.length} caractères)`);
+      }
+    } catch (erreurResume) {
+      // Le résumé échoue mais la transcription est sauvée — pas critique
+      console.error(
+        `[Transcription] Source ${sourceId} : erreur génération résumé (non critique) :`,
+        erreurResume.message
+      );
+    }
+
+    // Étape 9 — Extraire les points d'action (Claude)
+    try {
+      const promptActions = "Extrais les points d'action concrets de ce texte. Retourne UNIQUEMENT un tableau JSON de strings, chaque string étant une action concrète. S'il n'y a aucun point d'action, retourne un tableau vide []. Pas de texte avant ou après le JSON.";
+
+      const client = getClientAnthropic();
+      const reponseActions = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: `${promptActions}\n\nTexte :\n${texteTranscrit}`
+        }]
+      });
+
+      const texteActions = reponseActions.content[0]?.text;
+      if (texteActions) {
+        const pointsAction = JSON.parse(texteActions);
+        if (Array.isArray(pointsAction) && pointsAction.length > 0) {
+          await db.query(SQL.MAJ_POINTS_ACTION, [JSON.stringify(pointsAction), sourceId]);
+          console.log(`[Transcription] Source ${sourceId} : ${pointsAction.length} point(s) d'action extraits`);
+        } else {
+          console.log(`[Transcription] Source ${sourceId} : aucun point d'action détecté`);
+        }
+      }
+    } catch (erreurActions) {
+      // Les points d'action échouent mais la transcription est sauvée — pas critique
+      console.error(
+        `[Transcription] Source ${sourceId} : erreur extraction points d'action (non critique) :`,
+        erreurActions.message
       );
     }
 

@@ -144,8 +144,13 @@ async function initDatabase() {
         id SERIAL PRIMARY KEY,
         space_id INTEGER NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        titre TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+    // Migration : ajouter la colonne titre si la table existe déjà sans cette colonne
+    await pool.query(`
+      ALTER TABLE conversations ADD COLUMN IF NOT EXISTS titre TEXT;
     `);
     console.log('✅ Table "conversations" prête');
 

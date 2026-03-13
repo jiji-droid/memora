@@ -7,6 +7,7 @@
  * GET    /spaces/:spaceId/conversations       → Lister les conversations d'un espace
  * POST   /spaces/:spaceId/conversations       → Créer une conversation vide
  * GET    /conversations/:id/messages           → Lister les messages d'une conversation
+ * PUT    /conversations/:id                    → Renommer une conversation
  * DELETE /conversations/:id                    → Supprimer une conversation
  */
 
@@ -17,7 +18,7 @@ const db = require('../db');
 // ============================================
 const SQL = {
   LISTER_CONVERSATIONS: `
-    SELECT c.id, c.space_id, c.created_at,
+    SELECT c.id, c.space_id, c.titre, c.created_at,
            (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at ASC LIMIT 1) AS premier_message,
            (SELECT COUNT(*)::INTEGER FROM messages WHERE conversation_id = c.id) AS nombre_messages
     FROM conversations c
@@ -59,7 +60,16 @@ const SQL = {
     WHERE conversations.space_id = spaces.id
       AND conversations.id = $1
       AND spaces.user_id = $2
-    RETURNING conversations.id`
+    RETURNING conversations.id`,
+
+  RENOMMER_CONVERSATION: `
+    UPDATE conversations
+    SET titre = $1
+    FROM spaces
+    WHERE conversations.space_id = spaces.id
+      AND conversations.id = $2
+      AND spaces.user_id = $3
+    RETURNING conversations.id, conversations.space_id, conversations.titre, conversations.created_at`
 };
 
 /**
@@ -100,6 +110,7 @@ async function conversationsRoutes(fastify) {
       const conversations = result.rows.map(c => ({
         id: c.id,
         spaceId: c.space_id,
+        titre: c.titre,
         premierMessage: c.premier_message,
         nombreMessages: c.nombre_messages,
         createdAt: c.created_at
@@ -230,6 +241,56 @@ async function conversationsRoutes(fastify) {
 
     } catch (error) {
       request.log.error(error, 'Erreur liste messages');
+      return reply.status(500).send({
+        success: false,
+        error: 'Erreur serveur'
+      });
+    }
+  });
+
+  // ============================================
+  // RENOMMER UNE CONVERSATION : PUT /conversations/:id
+  // ============================================
+  fastify.put('/conversations/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = request.user.userId;
+    const conversationId = request.params.id;
+    const { titre } = request.body || {};
+
+    if (!titre || typeof titre !== 'string' || titre.trim().length === 0) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Le titre est requis'
+      });
+    }
+
+    try {
+      // Renomme la conversation (ownership vérifiée via JOIN avec spaces)
+      const result = await db.query(SQL.RENOMMER_CONVERSATION, [titre.trim(), conversationId, userId]);
+
+      if (result.rows.length === 0) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Conversation non trouvée'
+        });
+      }
+
+      const conversation = result.rows[0];
+
+      return reply.send({
+        success: true,
+        message: 'Conversation renommée',
+        data: {
+          conversation: {
+            id: conversation.id,
+            spaceId: conversation.space_id,
+            titre: conversation.titre,
+            createdAt: conversation.created_at
+          }
+        }
+      });
+
+    } catch (error) {
+      request.log.error(error, 'Erreur renommage conversation');
       return reply.status(500).send({
         success: false,
         error: 'Erreur serveur'
