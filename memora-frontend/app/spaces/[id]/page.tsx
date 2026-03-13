@@ -136,6 +136,26 @@ export default function SpaceDetailPage() {
       if (res.data?.source) {
         setSources((prev) => [res.data!.source, ...prev]);
         setShowAddSource(false);
+
+        // Si c'est un audio/vidéo, déléguer le polling au SW
+        const mime = file.type || '';
+        if (mime.startsWith('audio/') || mime.startsWith('video/')) {
+          pollTranscriptionStatus(res.data.source.id);
+          if ('serviceWorker' in navigator) {
+            const token = localStorage.getItem('memora_token');
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            navigator.serviceWorker.ready.then((reg) => {
+              reg.active?.postMessage({
+                type: 'WATCH_TRANSCRIPTION',
+                sourceId: res.data!.source.id,
+                token,
+                apiUrl,
+                spaceId,
+                nom: res.data!.source.nom,
+              });
+            });
+          }
+        }
       }
     } catch (err) {
       console.error('Erreur upload:', err);
@@ -193,6 +213,22 @@ export default function SpaceDetailPage() {
         setSources((prev) => [res.data!.source, ...prev]);
         setUploadProgress('Transcription en cours...');
         pollTranscriptionStatus(res.data.source.id);
+
+        // Déléguer le polling au Service Worker (continue même si l'app est fermée)
+        if ('serviceWorker' in navigator) {
+          const token = localStorage.getItem('memora_token');
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+          navigator.serviceWorker.ready.then((reg) => {
+            reg.active?.postMessage({
+              type: 'WATCH_TRANSCRIPTION',
+              sourceId: res.data!.source.id,
+              token,
+              apiUrl,
+              spaceId,
+              nom: res.data!.source.nom,
+            });
+          });
+        }
       }
     } catch (err) {
       console.error('Erreur upload note vocale:', err);

@@ -345,7 +345,14 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 
-  // L'app peut aussi demander une notification manuellement
+  // L'app demande au SW de surveiller une transcription en cours
+  if (event.data && event.data.type === 'WATCH_TRANSCRIPTION') {
+    const { sourceId, token, apiUrl, spaceId, nom } = event.data;
+    console.log('[SW] Surveillance transcription source', sourceId);
+    pollTranscription(sourceId, token, apiUrl, spaceId, nom);
+  }
+
+  // Notification manuelle
   if (event.data && event.data.type === 'TRANSCRIPTION_DONE') {
     const { nom } = event.data;
     self.registration.showNotification('Memora', {
