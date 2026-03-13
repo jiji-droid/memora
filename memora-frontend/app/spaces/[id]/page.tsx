@@ -7,10 +7,11 @@ import EmptyState from '@/components/EmptyState';
 import LoadingScreen from '@/components/LoadingScreen';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Modal from '@/components/Modal';
+import VoiceRecorder from '@/components/VoiceRecorder';
 import {
   getSpace, getSource, deleteSource, uploadFile, createSource,
   getConversations, createConversation, getMessages, sendChatMessage,
-  isLoggedIn, logout, getProfile,
+  getSourceStatus, isLoggedIn, logout, getProfile,
 } from '@/lib/api';
 import { exportSourcePDF } from '@/lib/export';
 import type { Space, Source, Conversation, Message, User, SourceType } from '@/lib/types';
@@ -32,6 +33,10 @@ export default function SpaceDetailPage() {
   const [showAddSource, setShowAddSource] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Note vocale
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   // Texte rapide (modale)
   const [showPasteText, setShowPasteText] = useState(false);
@@ -133,6 +138,63 @@ export default function SpaceDetailPage() {
     } catch (err) {
       console.error('Erreur création source:', err);
     }
+  }
+
+  // Upload d'une note vocale enregistrée
+  async function handleVoiceRecordingComplete(blob: Blob, duration: number, nom: string) {
+    setShowVoiceRecorder(false);
+    setShowAddSource(false);
+    setUploadProgress('Upload en cours...');
+
+    try {
+      // Convertir le Blob en File pour l'upload
+      const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';
+      const file = new File([blob], `${nom}.${extension}`, { type: blob.type });
+
+      const res = await uploadFile(spaceId, file, nom);
+      if (res.data?.source) {
+        setSources((prev) => [res.data!.source, ...prev]);
+        setUploadProgress('Transcription en cours...');
+
+        // Polling automatique du statut de transcription
+        pollTranscriptionStatus(res.data.source.id);
+      }
+    } catch (err) {
+      console.error('Erreur upload note vocale:', err);
+      setUploadProgress(null);
+    }
+  }
+
+  // Polling du statut de transcription
+  function pollTranscriptionStatus(sourceId: number) {
+    const interval = setInterval(async () => {
+      try {
+        const res = await getSourceStatus(sourceId);
+        const status = res.data?.transcriptionStatus;
+
+        if (status === 'done' || status === 'error') {
+          clearInterval(interval);
+          setUploadProgress(null);
+
+          // Recharger la source complète dans la liste
+          const sourceRes = await getSource(sourceId);
+          if (sourceRes.data?.source) {
+            setSources((prev) =>
+              prev.map((s) => s.id === sourceId ? sourceRes.data!.source : s)
+            );
+          }
+        }
+      } catch {
+        clearInterval(interval);
+        setUploadProgress(null);
+      }
+    }, 3000);
+
+    // Sécurité : arrêter après 5 minutes
+    setTimeout(() => {
+      clearInterval(interval);
+      setUploadProgress(null);
+    }, 300000);
   }
 
   async function handleDeleteSource(id: number) {
@@ -332,6 +394,19 @@ export default function SpaceDetailPage() {
               </div>
             </button>
             <button
+              onClick={() => { setShowVoiceRecorder(true); setShowAddSource(false); }}
+              className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-memora-orange-pale transition-colors text-left"
+            >
+              <svg className="w-5 h-5 text-[var(--color-accent-secondary)]" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text-primary)]">Note vocale</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">Enregistrer avec le micro</p>
+              </div>
+            </button>
+            <button
               onClick={() => { setPasteType('meeting'); setShowPasteText(true); setShowAddSource(false); }}
               className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-memora-bleu-pale transition-colors text-left"
             >
@@ -345,6 +420,26 @@ export default function SpaceDetailPage() {
             </button>
           </div>
           <input ref={fileInputRef} type="file" className="hidden" accept=".mp3,.mp4,.wav,.webm,.m4a,.ogg,.pdf,.docx,.txt" onChange={handleFileUpload} />
+        </div>
+      )}
+
+      {/* Enregistreur vocal */}
+      {showVoiceRecorder && (
+        <div className="card mb-4 overflow-hidden animate-slide-down">
+          <VoiceRecorder
+            onRecordingComplete={handleVoiceRecordingComplete}
+            onCancel={() => setShowVoiceRecorder(false)}
+          />
+        </div>
+      )}
+
+      {/* Indicateur de progression upload/transcription */}
+      {uploadProgress && (
+        <div className="flex items-center gap-3 p-3 mb-4 rounded-lg bg-memora-orange-pale animate-fade-in">
+          <LoadingSpinner size="sm" />
+          <p className="text-sm font-medium text-[var(--color-accent-secondary)]">
+            {uploadProgress}
+          </p>
         </div>
       )}
 
