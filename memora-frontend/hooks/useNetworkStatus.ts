@@ -32,10 +32,15 @@ export function useNetworkStatus() {
       }, 5000);
     }
 
+    // Écouter les événements standard ET custom
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     window.addEventListener('memora:online', handleOnline);
     window.addEventListener('memora:offline', handleOffline);
 
     return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
       window.removeEventListener('memora:online', handleOnline);
       window.removeEventListener('memora:offline', handleOffline);
       if (timerReset) clearTimeout(timerReset);

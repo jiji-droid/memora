@@ -164,8 +164,8 @@ export default function SpaceDetailPage() {
     setShowVoiceRecorder(false);
     setShowAddSource(false);
 
-    // Si pas de réseau → sauvegarder en offline
-    if (!isOnline) {
+    // Si pas de réseau → sauvegarder en offline (check direct du navigateur)
+    if (!navigator.onLine) {
       try {
         await saveOfflineRecording(blob, nom, duration);
         setUploadProgress(null);
