@@ -211,19 +211,22 @@ export default function SettingsPage() {
             <button
               onClick={handleToggleNotif}
               disabled={notifPermission === 'denied'}
-              className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${
+              className={`relative flex-shrink-0 rounded-full transition-colors ${
                 notifTranscription && notifPermission === 'granted'
                   ? 'bg-[var(--color-accent-secondary)]'
                   : 'bg-[var(--color-border)]'
               }`}
+              style={{ width: '44px', height: '24px' }}
               title={notifTranscription ? 'Désactiver' : 'Activer'}
             >
               <div
-                className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
-                  notifTranscription && notifPermission === 'granted' ? 'translate-x-5.5' : 'translate-x-0.5'
-                }`}
+                className="absolute rounded-full bg-white shadow-sm transition-transform"
                 style={{
-                  transform: notifTranscription && notifPermission === 'granted' ? 'translateX(22px)' : 'translateX(2px)',
+                  width: '18px',
+                  height: '18px',
+                  top: '3px',
+                  left: '3px',
+                  transform: notifTranscription && notifPermission === 'granted' ? 'translateX(20px)' : 'translateX(0px)',
                 }}
               />
             </button>
