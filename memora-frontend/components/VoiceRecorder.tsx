@@ -219,14 +219,14 @@ export default function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRe
             </button>
             <button
               onClick={start}
-              className="w-16 h-16 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              className="w-28 h-28 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
               style={{
                 background: 'linear-gradient(135deg, #f58820 0%, #f5a623 100%)',
-                boxShadow: '0 4px 20px rgba(245, 136, 32, 0.4)',
+                boxShadow: '0 6px 30px rgba(245, 136, 32, 0.5)',
               }}
               title="Commencer l'enregistrement"
             >
-              <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
                 <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
               </svg>
@@ -250,14 +250,14 @@ export default function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRe
             {/* Stop (gros bouton) */}
             <button
               onClick={handleStopAndName}
-              className="w-16 h-16 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 animate-glow"
+              className="w-28 h-28 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 animate-glow"
               style={{
                 background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)',
+                boxShadow: '0 6px 30px rgba(239, 68, 68, 0.5)',
               }}
               title="Arrêter l'enregistrement"
             >
-              <div className="w-6 h-6 bg-white rounded-sm" />
+              <div className="w-8 h-8 bg-white rounded-sm" />
             </button>
 
             {/* Annuler */}

@@ -9,7 +9,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import Modal from '@/components/Modal';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import {
-  getSpace, getSource, deleteSource, uploadFile, createSource,
+  getSpace, getSource, deleteSource, uploadFile, createSource, updateSource,
   getConversations, createConversation, getMessages, sendChatMessage,
   getSourceStatus, isLoggedIn, logout, getProfile,
 } from '@/lib/api';
@@ -51,6 +51,12 @@ export default function SpaceDetailPage() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Édition de source
+  const [editingSource, setEditingSource] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editNom, setEditNom] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // --- Nouveaux états : layout 3 panneaux ---
   const [sourcesPanelOpen, setSourcesPanelOpen] = useState(true);
@@ -151,7 +157,7 @@ export default function SpaceDetailPage() {
       const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';
       const file = new File([blob], `${nom}.${extension}`, { type: blob.type });
 
-      const res = await uploadFile(spaceId, file, nom);
+      const res = await uploadFile(spaceId, file, nom, 'voice_note');
       if (res.data?.source) {
         setSources((prev) => [res.data!.source, ...prev]);
         setUploadProgress('Transcription en cours...');
@@ -205,6 +211,39 @@ export default function SpaceDetailPage() {
       if (selectedSource?.id === id) setSelectedSource(null);
     } catch (err) {
       console.error('Erreur suppression source:', err);
+    }
+  }
+
+  // Démarrer l'édition d'une source
+  function handleStartEdit() {
+    if (!selectedSource) return;
+    setEditNom(selectedSource.nom);
+    setEditContent(selectedSource.content || '');
+    setEditingSource(true);
+  }
+
+  // Sauvegarder les modifications d'une source
+  async function handleSaveEdit() {
+    if (!selectedSource) return;
+    setSaving(true);
+    try {
+      const res = await updateSource(selectedSource.id, {
+        nom: editNom.trim() || selectedSource.nom,
+        content: editContent,
+      });
+      if (res.data?.source) {
+        // Mettre à jour la source sélectionnée
+        setSelectedSource({ ...selectedSource, nom: res.data.source.nom, content: res.data.source.content });
+        // Mettre à jour la liste
+        setSources((prev) =>
+          prev.map((s) => s.id === selectedSource.id ? { ...s, nom: res.data!.source.nom } : s)
+        );
+        setEditingSource(false);
+      }
+    } catch (err) {
+      console.error('Erreur modification source:', err);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -553,9 +592,21 @@ export default function SpaceDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+              {/* Bouton modifier */}
+              {!editingSource && (
+                <button
+                  onClick={handleStartEdit}
+                  className="btn btn-ghost btn-sm text-xs"
+                  title="Modifier"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              )}
               {/* Bouton fermer la source (mobile-friendly) */}
               <button
-                onClick={() => { setSelectedSource(null); setMobileTab('sources'); }}
+                onClick={() => { setSelectedSource(null); setEditingSource(false); setMobileTab('sources'); }}
                 className="btn btn-ghost btn-sm text-xs"
                 title="Fermer"
               >
@@ -580,7 +631,47 @@ export default function SpaceDetailPage() {
           {/* Corps défilable */}
           <div className="flex-1 overflow-y-auto space-y-6">
             {/* Contenu principal (transcription ou texte) */}
-            {selectedSource.transcriptionStatus === 'processing' || selectedSource.transcriptionStatus === 'pending' ? (
+            {editingSource ? (
+              <div className="space-y-3 animate-fade-in">
+                <div>
+                  <label className="label">Nom</label>
+                  <input
+                    type="text"
+                    value={editNom}
+                    onChange={(e) => setEditNom(e.target.value)}
+                    className="input text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="label">
+                    {selectedSource.type === 'meeting' || selectedSource.type === 'voice_note' ? 'Transcription' : 'Contenu'}
+                  </label>
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    rows={15}
+                    className="input text-sm resize-y font-mono leading-relaxed"
+                    style={{ minHeight: '200px' }}
+                  />
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setEditingSource(false)}
+                    className="btn btn-ghost btn-sm"
+                    disabled={saving}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    className="btn btn-primary btn-sm"
+                    disabled={saving}
+                  >
+                    {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+                  </button>
+                </div>
+              </div>
+            ) : selectedSource.transcriptionStatus === 'processing' || selectedSource.transcriptionStatus === 'pending' ? (
               <div className="flex items-center gap-3 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-bg-hover)' }}>
                 <LoadingSpinner size="sm" />
                 <p className="text-sm text-[var(--color-text-secondary)]">

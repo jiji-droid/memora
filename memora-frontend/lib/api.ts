@@ -215,10 +215,11 @@ export async function getSourceStatus(id: number) {
 // UPLOAD
 // ============================================
 
-export async function uploadFile(spaceId: number, file: File, nom?: string) {
+export async function uploadFile(spaceId: number, file: File, nom?: string, type?: string) {
   const formData = new FormData();
   formData.append('file', file);
   if (nom) formData.append('nom', nom);
+  if (type) formData.append('type', type);
 
   return apiUpload<{ source: Source }>(`/spaces/${spaceId}/sources/upload`, formData);
 }
