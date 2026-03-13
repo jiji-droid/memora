@@ -27,7 +27,7 @@ export default function PageHeader({
 }: PageHeaderProps) {
   return (
     <header
-      className="sticky top-0 z-30 flex items-center justify-between px-6 py-4"
+      className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 gap-2"
       style={{
         backgroundColor: 'var(--color-bg-secondary)',
         borderBottom: '1px solid var(--color-border)',
@@ -70,7 +70,7 @@ export default function PageHeader({
           </div>
         ) : (
           <>
-            <Logo size="md" showText={false} className="sm:hidden" />
+            <Logo size="sm" showText={false} className="sm:hidden" />
             <Logo size="md" showText className="hidden sm:flex" />
           </>
         )}
