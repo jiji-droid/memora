@@ -472,6 +472,15 @@ button, a, [role="button"], input[type="submit"], input[type="button"] {
   50% { box-shadow: 0 0 30px rgba(9, 48, 126, 0.4); }
 }
 
+@keyframes slideFromBottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-from-bottom {
+  animation: slideFromBottom 0.25s ease-out;
+}
+
 /* ============================================
    SCROLLBAR
    ============================================ */

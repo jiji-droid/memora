@@ -71,15 +71,15 @@ export default function SharesPanel({ open, onClose, spaceId }: SharesPanelProps
     }
   }
 
-  // Déterminer le statut visuel d'un lien
-  function getStatut(share: ShareLink): { label: string; couleur: string; fond: string } {
+  // Déterminer le statut visuel d'un lien — retourne des classes CSS
+  function getStatut(share: ShareLink): { label: string; badgeClass: string } {
     if (!share.actif) {
-      return { label: 'Révoqué', couleur: '#ef4444', fond: 'rgba(239, 68, 68, 0.1)' };
+      return { label: 'Révoqué', badgeClass: 'badge badge-error' };
     }
     if (share.expiration && new Date(share.expiration) < new Date()) {
-      return { label: 'Expiré', couleur: '#6b7280', fond: 'rgba(107, 114, 128, 0.1)' };
+      return { label: 'Expiré', badgeClass: 'badge badge-gray' };
     }
-    return { label: 'Actif', couleur: '#22c55e', fond: 'rgba(34, 197, 94, 0.1)' };
+    return { label: 'Actif', badgeClass: 'badge badge-success' };
   }
 
   if (!open) return null;
@@ -100,13 +100,12 @@ export default function SharesPanel({ open, onClose, spaceId }: SharesPanelProps
       >
         {/* En-tête */}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          <h2 className="text-lg font-semibold" style={{ color: '#09307e' }}>
+          <h2 className="text-lg font-semibold text-[var(--color-accent-primary)]">
             Liens de partage
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: 'var(--color-text-secondary)' }}
+            className="p-1.5 rounded-lg transition-colors text-[var(--color-text-secondary)]"
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)')}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
@@ -121,12 +120,12 @@ export default function SharesPanel({ open, onClose, spaceId }: SharesPanelProps
         <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#09307e', borderTopColor: 'transparent' }} />
+              <div className="w-8 h-8 border-2 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : shares.length === 0 ? (
             <div className="text-center py-12">
-              <div className="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: 'rgba(9, 48, 126, 0.06)' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#09307e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div className="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center bg-[var(--color-accent-primary)]/5">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-[var(--color-accent-primary)]" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="18" cy="5" r="3" />
                   <circle cx="6" cy="12" r="3" />
                   <circle cx="18" cy="19" r="3" />
@@ -134,8 +133,8 @@ export default function SharesPanel({ open, onClose, spaceId }: SharesPanelProps
                   <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
                 </svg>
               </div>
-              <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Aucun lien de partage</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+              <p className="text-sm font-medium text-[var(--color-text-primary)]">Aucun lien de partage</p>
+              <p className="text-xs mt-1 text-[var(--color-text-secondary)]">
                 Utilise le bouton &quot;Partager&quot; pour créer ton premier lien.
               </p>
             </div>
@@ -146,28 +145,21 @@ export default function SharesPanel({ open, onClose, spaceId }: SharesPanelProps
                 return (
                   <div
                     key={share.id}
-                    className="rounded-xl p-4"
-                    style={{
-                      border: '1px solid var(--color-border)',
-                      backgroundColor: 'var(--color-bg-primary)',
-                      opacity: share.actif ? 1 : 0.6,
-                    }}
+                    className="rounded-xl p-4 border border-[var(--color-border)] bg-[var(--color-bg-primary)]"
+                    style={{ opacity: share.actif ? 1 : 0.6 }}
                   >
                     {/* Titre + statut */}
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
+                      <h3 className="text-sm font-medium flex-1 truncate text-[var(--color-text-primary)]">
                         {share.titre}
                       </h3>
-                      <span
-                        className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ backgroundColor: statut.fond, color: statut.couleur }}
-                      >
+                      <span className={`flex-shrink-0 text-xs ${statut.badgeClass}`}>
                         {statut.label}
                       </span>
                     </div>
 
                     {/* Infos */}
-                    <div className="flex items-center gap-3 text-xs mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+                    <div className="flex items-center gap-3 text-xs mb-3 text-[var(--color-text-secondary)]">
                       {/* Icône protection */}
                       <span>
                         {share.protection === 'public' ? '🌐' : share.protection === 'password' ? '🔒' : '📧'}
@@ -185,19 +177,18 @@ export default function SharesPanel({ open, onClose, spaceId }: SharesPanelProps
                     <div className="flex gap-2">
                       <button
                         onClick={() => copierLien(share)}
-                        className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
-                        style={{
-                          backgroundColor: copiedId === share.id ? 'rgba(34, 197, 94, 0.1)' : 'rgba(9, 48, 126, 0.06)',
-                          color: copiedId === share.id ? '#22c55e' : '#09307e'
-                        }}
+                        className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                          copiedId === share.id
+                            ? 'bg-green-500/10 text-green-600'
+                            : 'bg-[var(--color-accent-primary)]/5 text-[var(--color-accent-primary)]'
+                        }`}
                       >
                         {copiedId === share.id ? 'Copié !' : 'Copier le lien'}
                       </button>
                       {share.actif && (
                         <button
                           onClick={() => setRevokingId(share.id)}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
-                          style={{ backgroundColor: 'rgba(239, 68, 68, 0.06)', color: '#ef4444' }}
+                          className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors bg-red-500/5 text-red-500 hover:bg-red-500/10"
                         >
                           Révoquer
                         </button>

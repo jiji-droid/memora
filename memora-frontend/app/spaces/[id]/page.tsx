@@ -11,6 +11,7 @@ import VoiceRecorder from '@/components/VoiceRecorder';
 import ConfirmModal from '@/components/ConfirmModal';
 import ShareModal from '@/components/ShareModal';
 import SharesPanel from '@/components/SharesPanel';
+import ActionMenu from '@/components/ActionMenu';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useOfflineRecordings } from '@/hooks/useOfflineRecordings';
 import {
@@ -84,9 +85,17 @@ export default function SpaceDetailPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showSharesPanel, setShowSharesPanel] = useState(false);
 
+  // Menu d'actions (header)
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const menuAnchorRef = useRef<HTMLButtonElement>(null);
+
+  // Suppression espace
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   // --- Nouveaux états : layout 3 panneaux ---
   const [sourcesPanelOpen, setSourcesPanelOpen] = useState(true);
   const [chatPanelOpen, setChatPanelOpen] = useState(true);
+  const [contenuPanelOpen, setContenuPanelOpen] = useState(true);
   const [selectedSource, setSelectedSource] = useState<Source | null>(null);
   const [selectedSourceLoading, setSelectedSourceLoading] = useState(false);
   const [chatFullscreen, setChatFullscreen] = useState(false);
@@ -560,7 +569,7 @@ export default function SpaceDetailPage() {
               disabled={uploading}
               className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-memora-bleu-pale transition-colors text-left"
             >
-              <svg className="w-5 h-5 text-[var(--color-accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-[var(--color-accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
               <div>
@@ -574,7 +583,7 @@ export default function SpaceDetailPage() {
               onClick={() => { setPasteType('text'); setShowPasteText(true); setShowAddSource(false); }}
               className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-memora-orange-pale transition-colors text-left"
             >
-              <svg className="w-5 h-5 text-[var(--color-accent-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-[var(--color-accent-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <div>
@@ -586,7 +595,7 @@ export default function SpaceDetailPage() {
               onClick={() => { setShowVoiceRecorder(true); setShowAddSource(false); }}
               className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-memora-orange-pale transition-colors text-left"
             >
-              <svg className="w-5 h-5 text-[var(--color-accent-secondary)]" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-[var(--color-accent-secondary)]" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
                 <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
               </svg>
@@ -599,7 +608,7 @@ export default function SpaceDetailPage() {
               onClick={() => { setPasteType('meeting'); setShowPasteText(true); setShowAddSource(false); }}
               className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-memora-bleu-pale transition-colors text-left"
             >
-              <svg className="w-5 h-5 text-[var(--color-accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-[var(--color-accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
               <div>
@@ -677,7 +686,7 @@ export default function SpaceDetailPage() {
                       const audio = new Audio(url);
                       audio.play();
                     }}
-                    className="p-1.5 rounded hover:bg-[var(--color-bg-hover)] transition-colors flex-shrink-0"
+                    className="p-2 rounded hover:bg-[var(--color-bg-hover)] transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                     title="Réécouter"
                   >
                     <svg className="w-4 h-4 text-[var(--color-accent-primary)]" fill="currentColor" viewBox="0 0 24 24">
@@ -687,10 +696,10 @@ export default function SpaceDetailPage() {
                   {/* Supprimer */}
                   <button
                     onClick={() => deleteOfflineRec(rec.id)}
-                    className="p-1.5 rounded hover:bg-error-50 text-[var(--color-text-secondary)] hover:text-red-500 transition-colors flex-shrink-0"
+                    className="p-2 rounded hover:bg-error-50 text-[var(--color-text-secondary)] hover:text-red-500 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                     title="Supprimer"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -753,9 +762,9 @@ export default function SpaceDetailPage() {
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteSource(source.id); }}
-                      className="p-1 rounded hover:bg-error-50 text-[var(--color-text-secondary)] hover:text-error-600 transition-all flex-shrink-0"
+                      className="p-2 rounded hover:bg-error-50 text-[var(--color-text-secondary)] hover:text-error-600 transition-all flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
@@ -818,7 +827,7 @@ export default function SpaceDetailPage() {
                   className="btn btn-ghost btn-sm text-xs"
                   title="Modifier"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
@@ -829,7 +838,7 @@ export default function SpaceDetailPage() {
                 className="btn btn-ghost btn-sm text-xs"
                 title="Fermer"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -839,7 +848,7 @@ export default function SpaceDetailPage() {
                 className="btn btn-outline btn-sm text-xs"
                 title="Exporter en PDF"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 PDF
@@ -941,7 +950,7 @@ export default function SpaceDetailPage() {
                       </>
                     ) : (
                       <>
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         {selectedSource.summary ? 'Regénérer' : 'Générer'}
@@ -1092,10 +1101,10 @@ export default function SpaceDetailPage() {
                 setRenamingConvId(activeConversation.id);
                 setRenameValue(activeConversation.titre || '');
               }}
-              className="btn btn-ghost btn-sm p-1"
+              className="btn btn-ghost btn-sm p-2"
               title="Renommer"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </button>
@@ -1104,10 +1113,10 @@ export default function SpaceDetailPage() {
           {activeConversation && conversations.length > 0 && (
             <button
               onClick={() => setDeletingConvId(activeConversation.id)}
-              className="btn btn-ghost btn-sm p-1 text-[var(--color-text-secondary)] hover:text-red-500"
+              className="btn btn-ghost btn-sm p-2 text-[var(--color-text-secondary)] hover:text-red-500"
               title="Supprimer"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </button>
@@ -1118,17 +1127,17 @@ export default function SpaceDetailPage() {
           {/* Bouton plein écran (desktop seulement) */}
           <button
             onClick={() => setChatFullscreen(!chatFullscreen)}
-            className="hidden lg:flex btn btn-ghost btn-sm p-1"
+            className="hidden lg:flex btn btn-ghost btn-sm p-2"
             title={chatFullscreen ? 'Réduire' : 'Plein écran'}
           >
             {chatFullscreen ? (
               // Icône réduire
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
               </svg>
             ) : (
               // Icône agrandir
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
               </svg>
             )}
@@ -1226,53 +1235,79 @@ export default function SpaceDetailPage() {
             ))}
           </div>
         )}
-        {user && (
-          <span className="text-sm text-[var(--color-text-secondary)] hidden sm:block">
-            {user.firstName || user.email}
-          </span>
-        )}
+        {/* Bouton Partager */}
         <button
           onClick={() => setShowShareModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg transition-colors text-white"
-          style={{ backgroundColor: '#f58820' }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#c56a0a')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f58820')}
+          className="btn btn-primary btn-sm"
           title="Partager cet espace"
         >
-          {/* Icône partage */}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="18" cy="5" r="3" />
             <circle cx="6" cy="12" r="3" />
             <circle cx="18" cy="19" r="3" />
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
           </svg>
-          <span>Partager</span>
+          <span className="hidden sm:inline">Partager</span>
         </button>
-        <button
-          onClick={() => setShowSharesPanel(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors"
-          style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-          title="Voir mes liens de partage"
-        >
-          {/* Icône lien */}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
-            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
-          </svg>
-          <span className="hidden sm:inline">Mes liens</span>
-        </button>
-        <button onClick={deconnexion} className="btn btn-ghost btn-sm text-sm">
-          Déconnexion
-        </button>
+        {/* Bouton ... (menu actions) */}
+        <div className="relative">
+          <button
+            ref={menuAnchorRef}
+            onClick={() => setShowActionMenu(!showActionMenu)}
+            className="btn btn-ghost btn-sm p-2"
+            title="Plus d'actions"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="19" r="2" />
+            </svg>
+          </button>
+          <ActionMenu
+            open={showActionMenu}
+            onClose={() => setShowActionMenu(false)}
+            anchorRef={menuAnchorRef}
+            items={[
+              {
+                label: 'Mes liens de partage',
+                icon: (
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                  </svg>
+                ),
+                onClick: () => setShowSharesPanel(true),
+              },
+              {
+                label: 'Exporter PDF',
+                icon: (
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                ),
+                onClick: () => { if (selectedSource) exportSourcePDF(selectedSource, space?.nom); },
+              },
+              {
+                label: 'Supprimer l\'espace',
+                icon: (
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                ),
+                onClick: () => setShowDeleteConfirm(true),
+                variant: 'danger',
+                separator: true,
+              },
+            ]}
+          />
+        </div>
       </PageHeader>
 
       {/* Tabs mobile (visible seulement < lg) */}
       <div className="lg:hidden bg-[var(--color-bg-primary)] border-b border-[var(--color-border)]">
         <div className="px-4 flex gap-4">
-          {(['sources', 'contenu', 'chat'] as MobileTab[]).map((tab) => (
+          {(['sources', 'chat', 'contenu'] as MobileTab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setMobileTab(tab)}
@@ -1317,14 +1352,14 @@ export default function SpaceDetailPage() {
         </div>
       )}
 
-      {/* Layout principal desktop (>= lg) : 3 panneaux */}
+      {/* Layout principal desktop (>= lg) : Sources | Chat (centre) | Contenu */}
       <div className="hidden lg:flex flex-1 overflow-hidden">
-        {/* Panneau Sources (gauche, 280px, collapsible) */}
+        {/* Panneau Sources (gauche, 350px, collapsible) */}
         <div
           className="flex-shrink-0 transition-all duration-300 overflow-hidden border-r border-[var(--color-border)] relative"
-          style={{ width: sourcesPanelOpen ? 280 : 0 }}
+          style={{ width: sourcesPanelOpen ? 350 : 0 }}
         >
-          <div className="h-full p-4 overflow-hidden" style={{ width: 280 }}>
+          <div className="h-full p-4 overflow-hidden" style={{ width: 350 }}>
             {sourcesPanel}
           </div>
         </div>
@@ -1344,33 +1379,33 @@ export default function SpaceDetailPage() {
           </svg>
         </button>
 
-        {/* Panneau Contenu central (flex-1, prend le reste) */}
+        {/* Panneau Chat central (flex-1, toujours visible) */}
         <div className="flex-1 min-w-0 p-4 overflow-hidden">
-          {contenuPanel}
+          {chatPanel}
         </div>
 
-        {/* Bouton toggle Chat */}
+        {/* Bouton toggle Contenu */}
         <button
-          onClick={() => setChatPanelOpen(!chatPanelOpen)}
+          onClick={() => setContenuPanelOpen(!contenuPanelOpen)}
           className="flex-shrink-0 flex items-center justify-center w-6 hover:bg-[var(--color-bg-hover)] transition-colors"
           style={{ color: 'var(--color-text-secondary)' }}
-          title={chatPanelOpen ? 'Masquer le chat' : 'Afficher le chat'}
+          title={contenuPanelOpen ? 'Masquer le contenu' : 'Afficher le contenu'}
         >
           <svg
-            className={`w-4 h-4 transition-transform duration-300 ${chatPanelOpen ? '' : 'rotate-180'}`}
+            className={`w-4 h-4 transition-transform duration-300 ${contenuPanelOpen ? '' : 'rotate-180'}`}
             fill="none" stroke="currentColor" viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
 
-        {/* Panneau Chat (droite, 380px, collapsible) */}
+        {/* Panneau Contenu (droite, 350px, collapsible) */}
         <div
           className="flex-shrink-0 transition-all duration-300 overflow-hidden border-l border-[var(--color-border)] relative"
-          style={{ width: chatPanelOpen ? 380 : 0 }}
+          style={{ width: contenuPanelOpen ? 350 : 0 }}
         >
-          <div className="h-full p-4 overflow-hidden" style={{ width: 380 }}>
-            {chatPanel}
+          <div className="h-full p-4 overflow-hidden" style={{ width: 350 }}>
+            {contenuPanel}
           </div>
         </div>
       </div>
@@ -1473,6 +1508,17 @@ export default function SpaceDetailPage() {
         open={showSharesPanel}
         onClose={() => setShowSharesPanel(false)}
         spaceId={spaceId}
+      />
+
+      {/* Modale confirmation suppression espace (placeholder — pas d'API delete space encore) */}
+      <ConfirmModal
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => { setShowDeleteConfirm(false); /* TODO : appeler deleteSpace(spaceId) quand l'API existe */ }}
+        title="Supprimer l'espace"
+        message="L'espace et toutes ses sources, conversations et liens de partage seront supprimés définitivement. Cette action est irréversible."
+        confirmLabel="Supprimer"
+        variant="danger"
       />
     </div>
   );
