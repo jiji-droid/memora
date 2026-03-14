@@ -236,9 +236,81 @@ async function initDatabase() {
     `);
     console.log('✅ Table "config" prête');
 
+    // ============================================
+    // TABLE: share_links (liens de partage par URL)
+    // Permet de partager des sources/conversations via un lien unique
+    // ============================================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS share_links (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token VARCHAR(64) UNIQUE NOT NULL,
+        titre VARCHAR(255) NOT NULL,
+        protection VARCHAR(20) NOT NULL DEFAULT 'public',
+        password_hash VARCHAR(255),
+        emails_autorises JSONB DEFAULT '[]',
+        expiration TIMESTAMP,
+        actif BOOLEAN DEFAULT TRUE,
+        branding_nom VARCHAR(255),
+        branding_organisation VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Table "share_links" prête');
+
+    // ============================================
+    // TABLE: share_link_items (éléments inclus dans un lien de partage)
+    // Chaque item est soit une source, soit une conversation
+    // ============================================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS share_link_items (
+        id SERIAL PRIMARY KEY,
+        link_id INTEGER NOT NULL REFERENCES share_links(id) ON DELETE CASCADE,
+        source_id INTEGER REFERENCES sources(id) ON DELETE CASCADE,
+        conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,
+        item_type VARCHAR(20) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Table "share_link_items" prête');
+
+    // ============================================
+    // TABLE: share_comments (commentaires sur un lien partagé)
+    // Les visiteurs peuvent laisser des commentaires
+    // ============================================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS share_comments (
+        id SERIAL PRIMARY KEY,
+        link_id INTEGER NOT NULL REFERENCES share_links(id) ON DELETE CASCADE,
+        auteur_nom VARCHAR(255) NOT NULL,
+        auteur_email VARCHAR(255) NOT NULL,
+        contenu TEXT NOT NULL,
+        source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Table "share_comments" prête');
+
+    // ============================================
+    // TABLE: share_views (vues/analytics sur un lien partagé)
+    // Enregistre chaque visite pour les statistiques
+    // ============================================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS share_views (
+        id SERIAL PRIMARY KEY,
+        link_id INTEGER NOT NULL REFERENCES share_links(id) ON DELETE CASCADE,
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        email VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Table "share_views" prête');
+
     console.log('');
     console.log('🎉 Base de données Memora v2 initialisée !');
-    console.log('   Tables : organizations, users, spaces, sources, conversations, messages, summary_models, audit_logs, push_subscriptions, config');
+    console.log('   Tables : organizations, users, spaces, sources, conversations, messages, summary_models, audit_logs, push_subscriptions, config, share_links, share_link_items, share_comments, share_views');
     console.log('');
 
   } catch (error) {

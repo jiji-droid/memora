@@ -151,3 +151,85 @@ export interface PaginatedData<T> {
   items: T[];
   pagination: Pagination;
 }
+
+// === PARTAGE PAR LIEN ===
+
+export type ShareProtection = 'public' | 'password' | 'email';
+
+export interface ShareLink {
+  id: number;
+  token: string;
+  titre: string;
+  url: string;
+  protection: ShareProtection;
+  expiration: string | null;
+  actif: boolean;
+  brandingNom: string;
+  brandingOrganisation: string | null;
+  itemsCount: number;
+  viewsCount: number;
+  commentsCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShareLinkDetail extends ShareLink {
+  items: ShareItem[];
+  commentaires: ShareComment[];
+}
+
+export interface ShareItem {
+  id: number;
+  type: 'source' | 'summary' | 'conversation';
+  sourceId: number | null;
+  conversationId: number | null;
+  nom: string;
+  sourceType: string;
+  content: string | null;
+  summary: string | null;
+  fileKey: string | null;
+  fileMime: string | null;
+  durationSeconds: number | null;
+  createdAt: string;
+}
+
+export interface ShareComment {
+  id: number;
+  auteurNom: string;
+  auteurEmail: string;
+  contenu: string;
+  sourceId: number | null;
+  createdAt: string;
+}
+
+export interface ShareItemInput {
+  sourceId?: number;
+  conversationId?: number;
+  type: 'source' | 'summary' | 'conversation';
+}
+
+export interface ShareInput {
+  titre: string;
+  items: ShareItemInput[];
+  protection: ShareProtection;
+  password?: string;
+  emailsAutorises?: string[];
+  expiration?: string;
+}
+
+export interface ShareStats {
+  totalVues: number;
+  vuesParJour: { date: string; count: number }[];
+  visiteurs: { email: string | null; ip: string; date: string }[];
+  commentaires: ShareComment[];
+}
+
+export interface PublicShare {
+  titre: string;
+  brandingNom: string;
+  brandingOrganisation: string | null;
+  protection: ShareProtection;
+  items: ShareItem[];
+  commentaires: ShareComment[];
+  requiresVerification?: boolean;
+}

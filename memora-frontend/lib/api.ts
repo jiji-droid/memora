@@ -9,6 +9,8 @@ import type {
   Space, SpaceInput, Source, SourceInput,
   Conversation, Message, SearchResult, EspaceSearchResult,
   SummaryModel, User, ApiResponse, Pagination,
+  ShareLink, ShareLinkDetail, ShareInput, ShareComment,
+  ShareStats, PublicShare,
 } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -97,6 +99,22 @@ async function apiUpload<T = unknown>(endpoint: string, formData: FormData): Pro
     throw new Error(data.error || 'Erreur lors de l\'upload');
   }
 
+  return data;
+}
+
+// Requête publique (sans header Authorization — pour les routes /public/*)
+async function publicApiRequest<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  const headers: Record<string, string> = {
+    ...options.headers as Record<string, string>,
+  };
+  if (options.body) {
+    headers['Content-Type'] = 'application/json';
+  }
+  const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Une erreur est survenue');
+  }
   return data;
 }
 
@@ -354,4 +372,64 @@ export async function unsubscribePush(endpoint: string) {
 
 export async function testPush() {
   return apiRequest<{ message: string }>('/push/test', { method: 'POST' });
+}
+
+// ============================================
+// PARTAGE PAR LIEN (authentifié)
+// ============================================
+
+export async function createShare(data: ShareInput) {
+  return apiRequest<{ share: ShareLink }>('/shares', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getShares(page = 1, limit = 20) {
+  return apiRequest<{ shares: ShareLink[]; pagination: Pagination }>(`/shares?page=${page}&limit=${limit}`);
+}
+
+export async function getShareDetail(id: number) {
+  return apiRequest<{ share: ShareLinkDetail }>(`/shares/${id}`);
+}
+
+export async function updateShare(id: number, data: Partial<ShareInput> & { actif?: boolean }) {
+  return apiRequest<{ share: ShareLink }>(`/shares/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteShare(id: number) {
+  return apiRequest(`/shares/${id}`, { method: 'DELETE' });
+}
+
+export async function getShareStats(id: number) {
+  return apiRequest<ShareStats>(`/shares/${id}/stats`);
+}
+
+// ============================================
+// PARTAGE PAR LIEN (public — sans auth)
+// ============================================
+
+export async function getPublicShare(token: string) {
+  return publicApiRequest<PublicShare>(`/public/${token}`);
+}
+
+export async function verifyPublicShare(token: string, data: { password?: string; email?: string }) {
+  return publicApiRequest<PublicShare>(`/public/${token}/verify`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function addPublicComment(token: string, data: { nom: string; email: string; contenu: string; sourceId?: number }) {
+  return publicApiRequest<{ comment: ShareComment }>(`/public/${token}/comments`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export function getPublicFileUrl(token: string, sourceId: number): string {
+  return `${API_URL}/public/${token}/file/${sourceId}`;
 }

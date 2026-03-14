@@ -9,6 +9,8 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import Modal from '@/components/Modal';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import ConfirmModal from '@/components/ConfirmModal';
+import ShareModal from '@/components/ShareModal';
+import SharesPanel from '@/components/SharesPanel';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useOfflineRecordings } from '@/hooks/useOfflineRecordings';
 import {
@@ -77,6 +79,10 @@ export default function SpaceDetailPage() {
   const [renamingConvId, setRenamingConvId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [deletingConvId, setDeletingConvId] = useState<number | null>(null);
+
+  // Partage par lien
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showSharesPanel, setShowSharesPanel] = useState(false);
 
   // --- Nouveaux états : layout 3 panneaux ---
   const [sourcesPanelOpen, setSourcesPanelOpen] = useState(true);
@@ -1225,6 +1231,39 @@ export default function SpaceDetailPage() {
             {user.firstName || user.email}
           </span>
         )}
+        <button
+          onClick={() => setShowShareModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
+          style={{ color: '#09307e', border: '1px solid rgba(9, 48, 126, 0.3)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(9, 48, 126, 0.05)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          title="Partager cet espace"
+        >
+          {/* Icône partage */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+          <span className="hidden sm:inline">Partager</span>
+        </button>
+        <button
+          onClick={() => setShowSharesPanel(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors"
+          style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          title="Voir mes liens de partage"
+        >
+          {/* Icône lien */}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+          </svg>
+          <span className="hidden sm:inline">Mes liens</span>
+        </button>
         <button onClick={deconnexion} className="btn btn-ghost btn-sm text-sm">
           Déconnexion
         </button>
@@ -1418,6 +1457,23 @@ export default function SpaceDetailPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Modale partage par lien */}
+      <ShareModal
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        spaceId={spaceId}
+        spaceNom={space?.nom || ''}
+        sources={sources}
+        conversations={conversations}
+      />
+
+      {/* Panneau gestion des liens de partage */}
+      <SharesPanel
+        open={showSharesPanel}
+        onClose={() => setShowSharesPanel(false)}
+        spaceId={spaceId}
+      />
     </div>
   );
 }

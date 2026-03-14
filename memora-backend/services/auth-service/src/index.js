@@ -20,6 +20,8 @@ const conversationsRoutes = require('./routes/conversations');
 const chatRoutes = require('./routes/chat');
 const searchRoutes = require('./routes/search');
 const pushRoutes = require('./routes/push');
+const sharesRoutes = require('./routes/shares');
+const publicRoutes = require('./routes/public');
 
 // Configuration
 const PORT = process.env.PORT || 3001;
@@ -101,6 +103,8 @@ fastify.register(chatRoutes);
 fastify.register(searchRoutes);
 fastify.register(require('./routes/summary-models'));
 fastify.register(pushRoutes);
+fastify.register(sharesRoutes);
+fastify.register(publicRoutes);
 
 // Hook global — alertes Telegram sur erreurs 500
 fastify.addHook('onError', async (request, reply, error) => {
@@ -191,6 +195,20 @@ const start = async () => {
 ║  GET    /push/vapid-key            Clé publique VAPID         ║
 ║  POST   /push/subscribe            S'abonner aux push         ║
 ║  POST   /push/unsubscribe          Se désabonner des push     ║
+║                                                               ║
+║  PARTAGE PAR LIEN                                            ║
+║  POST   /shares                    Créer un lien de partage   ║
+║  GET    /shares                    Lister ses liens            ║
+║  GET    /shares/:id                Détails d'un lien           ║
+║  PATCH  /shares/:id                Modifier un lien            ║
+║  DELETE /shares/:id                Révoquer un lien            ║
+║  GET    /shares/:id/stats          Statistiques d'un lien      ║
+║                                                               ║
+║  PARTAGE PUBLIC (sans auth)                                  ║
+║  GET    /public/:token             Voir un partage             ║
+║  POST   /public/:token/verify      Vérifier mot de passe      ║
+║  POST   /public/:token/comments    Ajouter un commentaire      ║
+║  GET    /public/:token/file/:id    Télécharger un fichier      ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
     `);
