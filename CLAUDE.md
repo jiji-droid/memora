@@ -17,11 +17,11 @@
 
 | Metrique | Valeur |
 |----------|--------|
-| **Avancement global** | 97% |
-| **Phase actuelle** | Phase 2 quasi-complète — notes vocales, résumé auto, recherche globale, offline, Web Push déployé |
-| **Derniere session** | 2026-03-13 |
-| **Prochaine action** | Debugger Web Push + Background Sync (ne fonctionne pas en arrière-plan sur Android Chrome) |
-| **Bloquant** | Web Push + Background Sync ne fire pas en background sur Android |
+| **Avancement global** | 98% |
+| **Phase actuelle** | Phase 3 en cours — partage par lien fait, refonte UX complétée |
+| **Derniere session** | 2026-03-14 |
+| **Prochaine action** | Phase 3.1 (tâches Wrike via Orchestrateur — dépend de l'orchestrateur), ou Phase 3.2 (Bot meeting Recall.ai) |
+| **Bloquant** | 3.1 dépend de l'orchestrateur (endpoint API). Web Push Android en pause (pas prioritaire) |
 
 ### Phases et avancement detaille
 
@@ -30,8 +30,8 @@
 | Phase 0 | Cadrage, stack technique, code initial | 100% | Terminé |
 | Phase 0.5 | PRD, architecture, roadmap | 100% | Terminé (2026-02-24) |
 | Phase 1 | "Mon outil" — Espaces, sources, chat IA, déploiement | 100% | Terminé (1.1-1.6 ✅, Qdrant ✅, recherche sémantique ✅) |
-| Phase 2 | "Mobile" — PWA, notes vocales, recherche | 90% | En cours (2.1-2.4 ✅, Web Push + Background Sync à debugger) |
-| Phase 3 | "Intégrations" — Bot meeting, Wrike, création tâches | 0% | Pas commencé |
+| Phase 2 | "Mobile" — PWA, notes vocales, recherche | 95% | Quasi-complet (Web Push Android en pause — pas prioritaire) |
+| Phase 3 | "Intégrations" — Bot meeting, Wrike, création tâches | 25% | En cours (3.4 partage ✅, refonte UX ✅, 3.1-3.3 restent) |
 | Phase 4 | "SaaS public" — Multi-user, Stripe, landing page | 0% | Pas commencé |
 
 ### Journal des sessions
@@ -54,6 +54,7 @@
 | 2026-03-11 | 0.5h | Fix Qdrant VPS : API key auth (Gestimatech2026Qdrant!), fix gemini-embedding-001, test E2E complet (source → embedding → search score 0.49) | 85% → 90% |
 | 2026-03-11 | 1h | Phase 2.1 PWA : manifest.json, service worker (4 stratégies cache), page offline, NetworkToast, auto-refresh dashboard, icônes PNG (Sharp), nettoyage 7 fichiers template Next.js | 90% → 92% |
 | 2026-03-13 | 3.75h | Phase 2 complète : notes vocales (enregistreur, waveform, gros bouton 176px), résumé auto + points d'action, édition sources, renommer/supprimer conversations, recherche globale cross-espaces avec filtres + checkboxes, mode offline (IndexedDB, réécoute, sync auto), Web Push API (VAPID, pushService, notifications serveur). Vision écosystème documentée. Bug: Web Push + Background Sync ne fonctionnent pas en background Android. | 92% → 97% |
+| 2026-03-14 | 2.25h | Phase 3.4 partage par lien (4 tables DB, routes shares + public, ShareModal cartes sélectionnables, page publique /s/[token], SharesPanel, commentaires, Telegram + Push). Refonte UX complète : BottomSheet + ActionMenu, header simplifié (1 CTA + menu ...), colonnes réorganisées, accordion sources (contenu sous la carte), onglets mobile 2 blocs distincts, couleurs uniformes, icônes 20-24px, dark mode fixé. Discussion architecture : Orchestrateur = cerveau unique, Memora = canal + outils. | 97% → 98% |
 
 ---
 
