@@ -24,7 +24,7 @@ import {
 import { exportSourcePDF } from '@/lib/export';
 import type { Space, Source, Conversation, Message, User, SourceType } from '@/lib/types';
 
-type MobileTab = 'sources' | 'contenu' | 'chat';
+type MobileTab = 'sources' | 'chat';
 
 export default function SpaceDetailPage() {
   const router = useRouter();
@@ -92,10 +92,8 @@ export default function SpaceDetailPage() {
   // Suppression espace
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // --- Nouveaux états : layout 3 panneaux ---
+  // --- Nouveaux états : layout 2 panneaux ---
   const [sourcesPanelOpen, setSourcesPanelOpen] = useState(true);
-  const [chatPanelOpen, setChatPanelOpen] = useState(true);
-  const [contenuPanelOpen, setContenuPanelOpen] = useState(true);
   const [selectedSource, setSelectedSource] = useState<Source | null>(null);
   const [selectedSourceLoading, setSelectedSourceLoading] = useState(false);
   const [chatFullscreen, setChatFullscreen] = useState(false);
@@ -373,7 +371,6 @@ export default function SpaceDetailPage() {
   // Sélectionner une source et charger ses détails complets
   async function handleSelectSource(source: Source) {
     setSelectedSourceLoading(true);
-    setMobileTab('contenu'); // Sur mobile, basculer vers le panneau contenu
     try {
       const res = await getSource(source.id);
       if (res.data?.source) {
@@ -728,342 +725,292 @@ export default function SpaceDetailPage() {
               const statusBadge = getStatusBadge(source.transcriptionStatus);
               const isSelected = selectedSource?.id === source.id;
               return (
-                <div
-                  key={source.id}
-                  className={`card p-3 card-hover group cursor-pointer transition-all ${
-                    isSelected ? 'ring-2 ring-[var(--color-accent-primary)]' : ''
-                  }`}
-                  onClick={() => handleSelectSource(source)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-memora-bleu-pale flex items-center justify-center text-[var(--color-accent-primary)] flex-shrink-0">
-                      {source.type === 'meeting' || source.type === 'voice_note' ? (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-[var(--color-text-primary)] truncate">{source.nom}</h4>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className={`badge ${getSourceTypeBadge(source.type)} text-[10px]`}>
-                          {getSourceTypeLabel(source.type)}
-                        </span>
-                        {source.transcriptionStatus !== 'none' && (
-                          <span className={`badge ${statusBadge.classe} text-[10px]`}>
-                            {statusBadge.label}
-                          </span>
+                <div key={source.id}>
+                  {/* Carte source */}
+                  <div
+                    className={`card p-3 card-hover group cursor-pointer transition-all ${
+                      isSelected ? 'ring-2 ring-[var(--color-accent-primary)] rounded-t-xl !rounded-b-none' : ''
+                    }`}
+                    onClick={() => handleSelectSource(source)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-memora-bleu-pale flex items-center justify-center text-[var(--color-accent-primary)] flex-shrink-0">
+                        {source.type === 'meeting' || source.type === 'voice_note' ? (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
                         )}
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-[var(--color-text-primary)] truncate">{source.nom}</h4>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className={`badge ${getSourceTypeBadge(source.type)} text-[10px]`}>
+                            {getSourceTypeLabel(source.type)}
+                          </span>
+                          {source.transcriptionStatus !== 'none' && (
+                            <span className={`badge ${statusBadge.classe} text-[10px]`}>
+                              {statusBadge.label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteSource(source.id); }}
+                        className="p-2 rounded hover:bg-error-50 text-[var(--color-text-secondary)] hover:text-error-600 transition-all flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteSource(source.id); }}
-                      className="p-2 rounded hover:bg-error-50 text-[var(--color-text-secondary)] hover:text-error-600 transition-all flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
                   </div>
+
+                  {/* Contenu expandé en accordion (visible seulement si sélectionné) */}
+                  {isSelected && (
+                    <div className="border-x border-b border-[var(--color-border)] rounded-b-xl p-4 space-y-4 bg-[var(--color-bg-primary)] animate-fade-in">
+                      {selectedSourceLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <LoadingSpinner size="lg" />
+                        </div>
+                      ) : selectedSource ? (
+                        <>
+                          {/* Boutons d'action */}
+                          <div className="flex items-center gap-2 justify-end">
+                            {!editingSource && (
+                              <button
+                                onClick={handleStartEdit}
+                                className="btn btn-ghost btn-sm text-xs"
+                                title="Modifier"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => exportSourcePDF(selectedSource, space?.nom)}
+                              className="btn btn-outline btn-sm text-xs"
+                              title="Exporter en PDF"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              PDF
+                            </button>
+                            <button
+                              onClick={() => { setSelectedSource(null); setEditingSource(false); }}
+                              className="btn btn-ghost btn-sm text-xs"
+                              title="Fermer"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+
+                          {/* Contenu principal (transcription ou texte) */}
+                          {editingSource ? (
+                            <div className="space-y-3 animate-fade-in">
+                              <div>
+                                <label className="label">Nom</label>
+                                <input
+                                  type="text"
+                                  value={editNom}
+                                  onChange={(e) => setEditNom(e.target.value)}
+                                  className="input text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="label">
+                                  {selectedSource.type === 'meeting' || selectedSource.type === 'voice_note' ? 'Transcription' : 'Contenu'}
+                                </label>
+                                <textarea
+                                  value={editContent}
+                                  onChange={(e) => setEditContent(e.target.value)}
+                                  rows={15}
+                                  className="input text-sm resize-y font-mono leading-relaxed"
+                                  style={{ minHeight: '200px' }}
+                                />
+                              </div>
+                              <div className="flex gap-3 justify-end">
+                                <button
+                                  onClick={() => setEditingSource(false)}
+                                  className="btn btn-ghost btn-sm"
+                                  disabled={saving}
+                                >
+                                  Annuler
+                                </button>
+                                <button
+                                  onClick={handleSaveEdit}
+                                  className="btn btn-primary btn-sm"
+                                  disabled={saving}
+                                >
+                                  {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : selectedSource.transcriptionStatus === 'processing' || selectedSource.transcriptionStatus === 'pending' ? (
+                            <div className="flex items-center gap-3 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-bg-hover)' }}>
+                              <LoadingSpinner size="sm" />
+                              <p className="text-sm text-[var(--color-text-secondary)]">
+                                Transcription en cours... Reviens dans quelques instants.
+                              </p>
+                            </div>
+                          ) : selectedSource.content ? (
+                            <div>
+                              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+                                {selectedSource.type === 'meeting' || selectedSource.type === 'voice_note' ? 'Transcription' : 'Contenu'}
+                              </h3>
+                              <div
+                                className="p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap"
+                                style={{
+                                  backgroundColor: 'var(--color-bg-hover)',
+                                  color: 'var(--color-text-primary)',
+                                  border: '1px solid var(--color-border)',
+                                }}
+                              >
+                                {selectedSource.content}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-bg-hover)' }}>
+                              <p className="text-sm text-[var(--color-text-secondary)] italic">
+                                Aucun contenu disponible.
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Résumé (si disponible) + bouton regénérer */}
+                          {selectedSource.content && (
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
+                                  Résumé
+                                </h3>
+                                <button
+                                  onClick={handleRegenerateSummary}
+                                  disabled={regenerating}
+                                  className="btn btn-outline btn-sm text-xs py-1 px-2"
+                                  title={selectedSource.summary ? 'Regénérer le résumé' : 'Générer un résumé'}
+                                >
+                                  {regenerating ? (
+                                    <>
+                                      <LoadingSpinner size="sm" />
+                                      Génération...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                      </svg>
+                                      {selectedSource.summary ? 'Regénérer' : 'Générer'}
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                              {selectedSource.summary ? (
+                                <div
+                                  className="p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap"
+                                  style={{
+                                    backgroundColor: 'var(--color-bg-hover)',
+                                    color: 'var(--color-text-primary)',
+                                    border: '1px solid var(--color-accent-primary)',
+                                    borderLeftWidth: '3px',
+                                  }}
+                                >
+                                  {selectedSource.summary}
+                                </div>
+                              ) : !regenerating && (
+                                <p className="text-sm text-[var(--color-text-secondary)] italic">
+                                  Aucun résumé. Clique sur &quot;Générer&quot; pour en créer un.
+                                </p>
+                              )}
+                              {selectedSource.summaryModel && (
+                                <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                                  Modèle : {selectedSource.summaryModel}
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Points d'action (si présents dans metadata) */}
+                          {selectedSource.metadata && Array.isArray((selectedSource.metadata as Record<string, unknown>).actionPoints) && ((selectedSource.metadata as Record<string, unknown>).actionPoints as string[]).length > 0 && (
+                            <div>
+                              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+                                Points d&apos;action
+                              </h3>
+                              <div
+                                className="p-4 rounded-lg"
+                                style={{
+                                  backgroundColor: 'var(--color-bg-hover)',
+                                  border: '1px solid var(--color-accent-secondary)',
+                                  borderLeftWidth: '3px',
+                                }}
+                              >
+                                <ul className="space-y-2">
+                                  {((selectedSource.metadata as Record<string, unknown>).actionPoints as string[]).map((action, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-sm">
+                                      <span className="text-[var(--color-accent-secondary)] mt-0.5 flex-shrink-0">&#9679;</span>
+                                      <span className="text-[var(--color-text-primary)]">{action}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Métadonnées */}
+                          <div>
+                            <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
+                              Informations
+                            </h3>
+                            <div className="card p-4">
+                              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                <dt className="text-[var(--color-text-secondary)]">Type</dt>
+                                <dd className="text-[var(--color-text-primary)] font-medium">{getSourceTypeLabel(selectedSource.type)}</dd>
+
+                                <dt className="text-[var(--color-text-secondary)]">Créée le</dt>
+                                <dd className="text-[var(--color-text-primary)]">{formatDate(selectedSource.createdAt)}</dd>
+
+                                {selectedSource.durationSeconds && (
+                                  <>
+                                    <dt className="text-[var(--color-text-secondary)]">Durée</dt>
+                                    <dd className="text-[var(--color-text-primary)]">{formatDuration(selectedSource.durationSeconds)}</dd>
+                                  </>
+                                )}
+
+                                {selectedSource.speakers && selectedSource.speakers.length > 0 && (
+                                  <>
+                                    <dt className="text-[var(--color-text-secondary)]">Participants</dt>
+                                    <dd className="text-[var(--color-text-primary)]">{selectedSource.speakers.join(', ')}</dd>
+                                  </>
+                                )}
+
+                                {selectedSource.fileSize && (
+                                  <>
+                                    <dt className="text-[var(--color-text-secondary)]">Taille</dt>
+                                    <dd className="text-[var(--color-text-primary)]">
+                                      {(selectedSource.fileSize / 1024 / 1024).toFixed(2)} Mo
+                                    </dd>
+                                  </>
+                                )}
+                              </dl>
+                            </div>
+                          </div>
+                        </>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
-    </div>
-  );
-
-  // ========================================================================
-  // === PANNEAU CONTENU CENTRAL ===
-  // ========================================================================
-  const contenuPanel = (
-    <div className="flex flex-col h-full">
-      {selectedSourceLoading ? (
-        // Chargement de la source
-        <div className="flex-1 flex items-center justify-center">
-          <LoadingSpinner size="lg" />
-        </div>
-      ) : selectedSource ? (
-        // Source sélectionnée — affichage du contenu
-        <>
-          {/* En-tête de la source */}
-          <div
-            className="flex items-center justify-between pb-4 mb-4 flex-shrink-0"
-            style={{ borderBottom: '1px solid var(--color-border)' }}
-          >
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold text-[var(--color-accent-primary)] truncate">
-                {selectedSource.nom}
-              </h2>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className={`badge ${getSourceTypeBadge(selectedSource.type)}`}>
-                  {getSourceTypeLabel(selectedSource.type)}
-                </span>
-                {selectedSource.transcriptionStatus !== 'none' && (
-                  <span className={`badge ${getStatusBadge(selectedSource.transcriptionStatus).classe}`}>
-                    {getStatusBadge(selectedSource.transcriptionStatus).label}
-                  </span>
-                )}
-                <span className="text-xs text-[var(--color-text-secondary)]">
-                  {formatDate(selectedSource.createdAt)}
-                </span>
-                {selectedSource.durationSeconds && (
-                  <span className="text-xs text-[var(--color-text-secondary)]">
-                    {formatDuration(selectedSource.durationSeconds)}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-              {/* Bouton modifier */}
-              {!editingSource && (
-                <button
-                  onClick={handleStartEdit}
-                  className="btn btn-ghost btn-sm text-xs"
-                  title="Modifier"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-              )}
-              {/* Bouton fermer la source (mobile-friendly) */}
-              <button
-                onClick={() => { setSelectedSource(null); setEditingSource(false); setMobileTab('sources'); }}
-                className="btn btn-ghost btn-sm text-xs"
-                title="Fermer"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              {/* Bouton export PDF */}
-              <button
-                onClick={() => exportSourcePDF(selectedSource, space?.nom)}
-                className="btn btn-outline btn-sm text-xs"
-                title="Exporter en PDF"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                PDF
-              </button>
-            </div>
-          </div>
-
-          {/* Corps défilable */}
-          <div className="flex-1 overflow-y-auto space-y-6">
-            {/* Contenu principal (transcription ou texte) */}
-            {editingSource ? (
-              <div className="space-y-3 animate-fade-in">
-                <div>
-                  <label className="label">Nom</label>
-                  <input
-                    type="text"
-                    value={editNom}
-                    onChange={(e) => setEditNom(e.target.value)}
-                    className="input text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="label">
-                    {selectedSource.type === 'meeting' || selectedSource.type === 'voice_note' ? 'Transcription' : 'Contenu'}
-                  </label>
-                  <textarea
-                    value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    rows={15}
-                    className="input text-sm resize-y font-mono leading-relaxed"
-                    style={{ minHeight: '200px' }}
-                  />
-                </div>
-                <div className="flex gap-3 justify-end">
-                  <button
-                    onClick={() => setEditingSource(false)}
-                    className="btn btn-ghost btn-sm"
-                    disabled={saving}
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleSaveEdit}
-                    className="btn btn-primary btn-sm"
-                    disabled={saving}
-                  >
-                    {saving ? 'Sauvegarde...' : 'Sauvegarder'}
-                  </button>
-                </div>
-              </div>
-            ) : selectedSource.transcriptionStatus === 'processing' || selectedSource.transcriptionStatus === 'pending' ? (
-              <div className="flex items-center gap-3 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-bg-hover)' }}>
-                <LoadingSpinner size="sm" />
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  Transcription en cours... Reviens dans quelques instants.
-                </p>
-              </div>
-            ) : selectedSource.content ? (
-              <div>
-                <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
-                  {selectedSource.type === 'meeting' || selectedSource.type === 'voice_note' ? 'Transcription' : 'Contenu'}
-                </h3>
-                <div
-                  className="p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap"
-                  style={{
-                    backgroundColor: 'var(--color-bg-hover)',
-                    color: 'var(--color-text-primary)',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
-                  {selectedSource.content}
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-bg-hover)' }}>
-                <p className="text-sm text-[var(--color-text-secondary)] italic">
-                  Aucun contenu disponible.
-                </p>
-              </div>
-            )}
-
-            {/* Résumé (si disponible) + bouton regénérer */}
-            {selectedSource.content && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
-                    Résumé
-                  </h3>
-                  <button
-                    onClick={handleRegenerateSummary}
-                    disabled={regenerating}
-                    className="btn btn-outline btn-sm text-xs py-1 px-2"
-                    title={selectedSource.summary ? 'Regénérer le résumé' : 'Générer un résumé'}
-                  >
-                    {regenerating ? (
-                      <>
-                        <LoadingSpinner size="sm" />
-                        Génération...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        {selectedSource.summary ? 'Regénérer' : 'Générer'}
-                      </>
-                    )}
-                  </button>
-                </div>
-                {selectedSource.summary ? (
-                  <div
-                    className="p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap"
-                    style={{
-                      backgroundColor: 'var(--color-bg-hover)',
-                      color: 'var(--color-text-primary)',
-                      border: '1px solid var(--color-accent-primary)',
-                      borderLeftWidth: '3px',
-                    }}
-                  >
-                    {selectedSource.summary}
-                  </div>
-                ) : !regenerating && (
-                  <p className="text-sm text-[var(--color-text-secondary)] italic">
-                    Aucun résumé. Clique sur &quot;Générer&quot; pour en créer un.
-                  </p>
-                )}
-                {selectedSource.summaryModel && (
-                  <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-                    Modèle : {selectedSource.summaryModel}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Points d'action (si présents dans metadata) */}
-            {selectedSource.metadata && Array.isArray((selectedSource.metadata as Record<string, unknown>).actionPoints) && ((selectedSource.metadata as Record<string, unknown>).actionPoints as string[]).length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
-                  Points d&apos;action
-                </h3>
-                <div
-                  className="p-4 rounded-lg"
-                  style={{
-                    backgroundColor: 'var(--color-bg-hover)',
-                    border: '1px solid var(--color-accent-secondary)',
-                    borderLeftWidth: '3px',
-                  }}
-                >
-                  <ul className="space-y-2">
-                    {((selectedSource.metadata as Record<string, unknown>).actionPoints as string[]).map((action, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="text-[var(--color-accent-secondary)] mt-0.5 flex-shrink-0">&#9679;</span>
-                        <span className="text-[var(--color-text-primary)]">{action}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {/* Métadonnées */}
-            <div>
-              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
-                Informations
-              </h3>
-              <div className="card p-4">
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                  <dt className="text-[var(--color-text-secondary)]">Type</dt>
-                  <dd className="text-[var(--color-text-primary)] font-medium">{getSourceTypeLabel(selectedSource.type)}</dd>
-
-                  <dt className="text-[var(--color-text-secondary)]">Créée le</dt>
-                  <dd className="text-[var(--color-text-primary)]">{formatDate(selectedSource.createdAt)}</dd>
-
-                  {selectedSource.durationSeconds && (
-                    <>
-                      <dt className="text-[var(--color-text-secondary)]">Durée</dt>
-                      <dd className="text-[var(--color-text-primary)]">{formatDuration(selectedSource.durationSeconds)}</dd>
-                    </>
-                  )}
-
-                  {selectedSource.speakers && selectedSource.speakers.length > 0 && (
-                    <>
-                      <dt className="text-[var(--color-text-secondary)]">Participants</dt>
-                      <dd className="text-[var(--color-text-primary)]">{selectedSource.speakers.join(', ')}</dd>
-                    </>
-                  )}
-
-                  {selectedSource.fileSize && (
-                    <>
-                      <dt className="text-[var(--color-text-secondary)]">Taille</dt>
-                      <dd className="text-[var(--color-text-primary)]">
-                        {(selectedSource.fileSize / 1024 / 1024).toFixed(2)} Mo
-                      </dd>
-                    </>
-                  )}
-                </dl>
-              </div>
-            </div>
-          </div>
-        </>
-      ) : (
-        // Aucune source sélectionnée — état vide
-        <div className="flex-1 flex items-center justify-center">
-          <EmptyState
-            icon={
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            }
-            title="Sélectionne une source"
-            description="Clique sur une source dans la liste pour voir son contenu ici."
-          />
-        </div>
-      )}
     </div>
   );
 
@@ -1304,24 +1251,37 @@ export default function SpaceDetailPage() {
         </div>
       </PageHeader>
 
-      {/* Tabs mobile (visible seulement < lg) */}
+      {/* Onglets mobile (visible seulement < lg) */}
       <div className="lg:hidden bg-[var(--color-bg-primary)] border-b border-[var(--color-border)]">
-        <div className="px-4 flex gap-4">
-          {(['sources', 'chat', 'contenu'] as MobileTab[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setMobileTab(tab)}
-              className={`py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${
-                mobileTab === tab
-                  ? 'border-[var(--color-accent-secondary)] text-[var(--color-accent-primary)]'
-                  : 'border-transparent text-[var(--color-text-secondary)]'
-              }`}
-            >
-              {tab === 'sources' && `Sources (${sources.length})`}
-              {tab === 'contenu' && 'Contenu'}
-              {tab === 'chat' && 'Chat IA'}
-            </button>
-          ))}
+        <div className="px-4 py-2 flex gap-3">
+          {/* Onglet Sources */}
+          <button
+            onClick={() => setMobileTab('sources')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
+              mobileTab === 'sources'
+                ? 'bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)] border border-[var(--color-accent-primary)]/30'
+                : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border border-transparent'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+            Sources ({sources.length})
+          </button>
+          {/* Onglet Chat */}
+          <button
+            onClick={() => setMobileTab('chat')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
+              mobileTab === 'chat'
+                ? 'bg-[var(--color-accent-secondary)]/10 text-[var(--color-accent-secondary)] border border-[var(--color-accent-secondary)]/30'
+                : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] border border-transparent'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Chat IA
+          </button>
         </div>
       </div>
 
@@ -1352,7 +1312,7 @@ export default function SpaceDetailPage() {
         </div>
       )}
 
-      {/* Layout principal desktop (>= lg) : Sources | Chat (centre) | Contenu */}
+      {/* Layout principal desktop (>= lg) : Sources | Chat */}
       <div className="hidden lg:flex flex-1 overflow-hidden">
         {/* Panneau Sources (gauche, 350px, collapsible) */}
         <div
@@ -1379,34 +1339,9 @@ export default function SpaceDetailPage() {
           </svg>
         </button>
 
-        {/* Panneau Chat central (flex-1, toujours visible) */}
+        {/* Panneau Chat (flex-1, toujours visible) */}
         <div className="flex-1 min-w-0 p-4 overflow-hidden">
           {chatPanel}
-        </div>
-
-        {/* Bouton toggle Contenu */}
-        <button
-          onClick={() => setContenuPanelOpen(!contenuPanelOpen)}
-          className="flex-shrink-0 flex items-center justify-center w-6 hover:bg-[var(--color-bg-hover)] transition-colors"
-          style={{ color: 'var(--color-text-secondary)' }}
-          title={contenuPanelOpen ? 'Masquer le contenu' : 'Afficher le contenu'}
-        >
-          <svg
-            className={`w-4 h-4 transition-transform duration-300 ${contenuPanelOpen ? '' : 'rotate-180'}`}
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-
-        {/* Panneau Contenu (droite, 350px, collapsible) */}
-        <div
-          className="flex-shrink-0 transition-all duration-300 overflow-hidden border-l border-[var(--color-border)] relative"
-          style={{ width: contenuPanelOpen ? 350 : 0 }}
-        >
-          <div className="h-full p-4 overflow-hidden" style={{ width: 350 }}>
-            {contenuPanel}
-          </div>
         </div>
       </div>
 
@@ -1414,7 +1349,6 @@ export default function SpaceDetailPage() {
       <div className="lg:hidden flex-1 overflow-hidden p-4">
         <div className="h-full overflow-hidden">
           {mobileTab === 'sources' && sourcesPanel}
-          {mobileTab === 'contenu' && contenuPanel}
           {mobileTab === 'chat' && chatPanel}
         </div>
       </div>
