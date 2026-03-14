@@ -1233,21 +1233,21 @@ export default function SpaceDetailPage() {
         )}
         <button
           onClick={() => setShowShareModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
-          style={{ color: '#09307e', border: '1px solid rgba(9, 48, 126, 0.3)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(9, 48, 126, 0.05)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg transition-colors text-white"
+          style={{ backgroundColor: '#f58820' }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#c56a0a')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f58820')}
           title="Partager cet espace"
         >
           {/* Icône partage */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="18" cy="5" r="3" />
             <circle cx="6" cy="12" r="3" />
             <circle cx="18" cy="19" r="3" />
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
           </svg>
-          <span className="hidden sm:inline">Partager</span>
+          <span>Partager</span>
         </button>
         <button
           onClick={() => setShowSharesPanel(true)}
