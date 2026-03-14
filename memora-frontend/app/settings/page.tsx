@@ -10,7 +10,7 @@ import {
   isLoggedIn, getProfile, logout,
   getSummaryModels, createSummaryModel, updateSummaryModel,
   deleteSummaryModel, setDefaultSummaryModel,
-  getVapidKey, subscribePush, unsubscribePush,
+  getVapidKey, subscribePush, unsubscribePush, testPush,
 } from '@/lib/api';
 import type { User, SummaryModel } from '@/lib/types';
 
@@ -34,6 +34,8 @@ export default function SettingsPage() {
   const [notifTranscription, setNotifTranscription] = useState(false);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
   const [notifLoading, setNotifLoading] = useState(false);
+  const [testingPush, setTestingPush] = useState(false);
+  const [testPushResult, setTestPushResult] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -235,6 +237,25 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleTestPush() {
+    if (testingPush) return;
+    setTestingPush(true);
+    setTestPushResult(null);
+    try {
+      const res = await testPush();
+      if (res.success) {
+        setTestPushResult('Notification envoyée! Tu devrais la recevoir dans quelques secondes.');
+      } else {
+        setTestPushResult(`Erreur : ${res.error || 'Inconnue'}`);
+      }
+    } catch (err) {
+      setTestPushResult('Erreur réseau — vérifie ta connexion.');
+    } finally {
+      setTestingPush(false);
+      setTimeout(() => setTestPushResult(null), 5000);
+    }
+  }
+
   async function handleDeleteModel(id: number) {
     try {
       await deleteSummaryModel(id);
@@ -290,6 +311,18 @@ export default function SettingsPage() {
                 <p className="text-xs text-red-500 mt-1">
                   Les notifications sont bloquées dans ton navigateur. Active-les dans les paramètres du site.
                 </p>
+              )}
+              {notifTranscription && notifPermission === 'granted' && (
+                <button
+                  onClick={handleTestPush}
+                  disabled={testingPush}
+                  className="mt-2 text-xs text-[var(--color-accent-primary)] hover:underline disabled:opacity-50"
+                >
+                  {testingPush ? 'Envoi en cours...' : 'Envoyer une notification de test'}
+                </button>
+              )}
+              {testPushResult && (
+                <p className="text-xs mt-1 text-[var(--color-text-secondary)]">{testPushResult}</p>
               )}
             </div>
             <button

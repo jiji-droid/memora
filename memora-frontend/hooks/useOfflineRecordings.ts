@@ -101,17 +101,32 @@ export function useOfflineRecordings(spaceId: number, options: UseOfflineRecordi
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  // Charger au montage
+  // Charger au montage + auto-sync si en ligne avec des enregistrements en attente
   useEffect(() => {
-    chargerDepuisDB(spaceId).then(setRecordings);
+    chargerDepuisDB(spaceId).then((recs) => {
+      setRecordings(recs);
+      // Auto-sync si on est en ligne et qu'il y a des enregistrements en attente
+      const enAttente = recs.filter((r) => r.status === 'pending' || r.status === 'error');
+      if (enAttente.length > 0 && navigator.onLine) {
+        setTimeout(() => doSync(), 1000);
+      }
+    });
   }, [spaceId]);
 
-  // Sync automatique quand le réseau revient (fallback si Background Sync pas supporté)
+  // Sync automatique quand le réseau revient, l'app redevient visible, ou SW termine
   useEffect(() => {
     function handleOnline() {
       setTimeout(() => doSync(), 2000);
     }
     window.addEventListener('online', handleOnline);
+
+    // Sync quand l'app redevient visible (retour dans l'onglet/PWA)
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        setTimeout(() => doSync(), 500);
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Écouter le message SYNC_COMPLETE du Service Worker
     function handleSWMessage(event: MessageEvent) {
@@ -129,6 +144,7 @@ export function useOfflineRecordings(spaceId: number, options: UseOfflineRecordi
 
     return () => {
       window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('message', handleSWMessage);
       }

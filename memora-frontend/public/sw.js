@@ -8,7 +8,7 @@
  * - Notifications : alerte quand une transcription est terminée
  */
 
-const CACHE_NAME = 'memora-v4';
+const CACHE_NAME = 'memora-v5';
 const OFFLINE_URL = '/offline';
 const DB_NAME = 'memora-offline';
 const DB_VERSION = 1;
@@ -164,6 +164,8 @@ async function pollTranscription(sourceId, token, apiUrl, spaceId, nomSource) {
           icon: '/icons/icon-192x192.png',
           badge: '/icons/icon-192x192.png',
           tag: `transcription-${sourceId}`,
+          renotify: true,
+          vibrate: [200, 100, 200],
           data: { url: `/spaces/${spaceId}` },
         });
       } else if (status === 'error') {
@@ -360,6 +362,8 @@ self.addEventListener('message', (event) => {
       icon: '/icons/icon-192x192.png',
       badge: '/icons/icon-192x192.png',
       tag: 'transcription-done',
+      renotify: true,
+      vibrate: [200, 100, 200],
       data: { url: event.data.url || '/dashboard' },
     });
   }
@@ -370,16 +374,33 @@ self.addEventListener('message', (event) => {
 // ============================================
 
 self.addEventListener('push', (event) => {
-  const donnees = event.data ? event.data.json() : {};
+  let donnees = {};
+  try {
+    donnees = event.data ? event.data.json() : {};
+  } catch (errParse) {
+    // Si le JSON est invalide, on utilise le texte brut
+    const texte = event.data ? event.data.text() : '';
+    donnees = { body: texte || 'Nouvelle notification' };
+  }
+
   const titre = donnees.title || 'Memora';
   const options = {
     body: donnees.body || 'Nouvelle notification',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-192x192.png',
     tag: donnees.tag || 'memora-notification',
+    renotify: true, // Vibrer même si le tag existe déjà
+    vibrate: [200, 100, 200], // Vibration Android
     data: { url: donnees.url || '/dashboard' },
   };
-  event.waitUntil(self.registration.showNotification(titre, options));
+
+  event.waitUntil(
+    self.registration.showNotification(titre, options)
+      .then(() => {
+        // Profiter du réveil du SW pour sync les enregistrements en attente
+        return syncPendingRecordings().catch(() => {});
+      })
+  );
 });
 
 // ============================================

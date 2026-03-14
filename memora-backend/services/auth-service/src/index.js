@@ -8,6 +8,9 @@ require('dotenv').config({ path: path.join(__dirname, '..', envFile) });
 // Alertes Telegram (Standard Gestimatech)
 const { envoyerAlerte } = require('./services/telegramService');
 
+// Web Push — initialisation VAPID au démarrage
+const pushService = require('./services/pushService');
+
 // Importer les routes
 const authRoutes = require('./routes/auth');
 const spacesRoutes = require('./routes/spaces');
@@ -132,6 +135,13 @@ const start = async () => {
   try {
     // Crée les tables si elles n'existent pas
     await db.initDatabase();
+
+    // Initialiser les clés VAPID pour Web Push (avant le premier envoi)
+    try {
+      await pushService.initVapid();
+    } catch (errVapid) {
+      console.error('[Push] Erreur initialisation VAPID (non bloquante):', errVapid.message);
+    }
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
     console.log(`

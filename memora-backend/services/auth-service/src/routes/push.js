@@ -77,6 +77,34 @@ async function pushRoutes(fastify) {
   });
 
   // ============================================
+  // TESTER LE PUSH : POST /push/test
+  // Envoie une notification de test à l'utilisateur connecté
+  // ============================================
+  fastify.post('/push/test', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = request.user.userId;
+
+    try {
+      await pushService.envoyerNotification(userId, {
+        title: 'Memora — Test',
+        body: 'Les notifications push fonctionnent correctement!',
+        url: '/settings',
+        tag: 'push-test'
+      });
+
+      return reply.send({
+        success: true,
+        data: { message: 'Notification de test envoyée' }
+      });
+    } catch (erreur) {
+      request.log.error(erreur, 'Erreur envoi notification test');
+      return reply.status(500).send({
+        success: false,
+        error: `Erreur envoi : ${erreur.message}`
+      });
+    }
+  });
+
+  // ============================================
   // SE DÉSABONNER DU PUSH : POST /push/unsubscribe
   // Body : { endpoint }
   // ============================================

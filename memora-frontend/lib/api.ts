@@ -351,3 +351,7 @@ export async function unsubscribePush(endpoint: string) {
     body: JSON.stringify({ endpoint }),
   });
 }
+
+export async function testPush() {
+  return apiRequest<{ message: string }>('/push/test', { method: 'POST' });
+}
